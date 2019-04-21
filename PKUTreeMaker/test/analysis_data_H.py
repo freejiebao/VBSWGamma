@@ -30,6 +30,30 @@ process.load("VAJets.PKUCommon.goodJets_cff")
 process.load("VAJets.PKUCommon.goodPhotons_cff")
 process.load("VAJets.PKUCommon.leptonicW_cff")
 
+#for egamma smearing
+
+from EgammaAnalysis.ElectronTools.regressionWeights_cfi import regressionWeights
+process = regressionWeights(process)
+process.load('EgammaAnalysis.ElectronTools.regressionApplication_cff')
+
+process.load('Configuration.StandardSequences.Services_cff')
+process.RandomNumberGeneratorService = cms.Service("RandomNumberGeneratorService",
+   calibratedPatElectrons  = cms.PSet( initialSeed = cms.untracked.uint32(81),
+      engineName = cms.untracked.string('TRandom3'),
+   ),
+   calibratedPatPhotons  = cms.PSet( initialSeed = cms.untracked.uint32(81),
+      engineName = cms.untracked.string('TRandom3'),
+   ),
+)
+process.load('EgammaAnalysis.ElectronTools.calibratedPatElectronsRun2_cfi')
+process.load('EgammaAnalysis.ElectronTools.calibratedPatPhotonsRun2_cfi')
+process.calibratedPatElectrons.electrons = cms.InputTag("slimmedElectrons")
+process.calibratedPatElectrons.isMC = cms.bool(runOnMC)
+process.calibratedPatPhotons.photons = cms.InputTag('slimmedPhotons')
+process.calibratedPatPhotons.isMC = cms.bool(runOnMC)
+
+#for egamma smearing
+
 # If Update
 process.goodMuons.src = "slimmedMuons"
 process.goodElectrons.src = "slimmedElectrons"

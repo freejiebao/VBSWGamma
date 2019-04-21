@@ -15,10 +15,12 @@ config.section_("Data")
 config.Data.inputDataset = '/LNuAJJ_EWK_MJJ-120_13TeV-madgraph-pythia8/RunIISummer16MiniAODv2-PUMoriond17_80X_mcRun2_asymptotic_2016_TrancheIV_v6-v1/MINIAODSIM'
 config.Data.inputDBS = 'global'
 config.Data.splitting = 'FileBased'
-config.Data.unitsPerJob = 2
+config.Data.unitsPerJob = 5
 config.Data.totalUnits = -1
+config.Data.outLFNDirBase = '/store/group/phys_jetmet/qihuang/'
+#config.Data.outLFNDirBase = '/store/user/qihuang/'
 config.Data.publication = False
 config.Data.outputDatasetTag = 'WAJJ-1'
 
 config.section_("Site")
-config.Site.storageSite = 'T3_US_FNALLPC'  #'T2_CH_CERN'
+config.Site.storageSite = 'T2_CH_CERN'

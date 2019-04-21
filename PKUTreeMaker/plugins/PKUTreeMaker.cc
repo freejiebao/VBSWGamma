@@ -92,7 +92,10 @@ private:
                                   float lxyMin=2.0, float probMin=1e-6, unsigned int nHitsBeforeVtxMax=0);
   int matchToTruth(const reco::Photon &pho,
                      const edm::Handle<edm::View<reco::GenParticle>>  &genParticles, bool &ISRPho, double &dR, int &isprompt);
-    
+
+  int matchToTrueLep(double lept_eta,double lept_phi,
+                     const edm::Handle<edm::View<reco::GenParticle>>  &genParticles, double &dR, int &ispromptLep);            //////////////////////////////////
+
   void findFirstNonPhotonMother(const reco::Candidate *particle,
                                   int &ancestorPID, int &ancestorStatus);
   float EAch(float x); 
@@ -141,6 +144,7 @@ private:
   int nVtx;
   double triggerWeight, lumiWeight, pileupWeight;
   double theWeight;
+double L1prefiring,L1prefiringup,L1prefiringdown;
   double  nump=0.;
   double  numm=0.;
   double  npT, npIT;
@@ -149,7 +153,7 @@ private:
   double ptVlepJEC, yVlepJEC, phiVlepJEC, massVlepJEC, mtVlepJEC, mtVlepJECnew;
   double Mla, Mva;
   double Mla_f, Mva_f;
-  double ptlep1, etalep1, philep1;
+  double ptlep1, etalep1, philep1,energylep1;
   int  lep, nlooseeles,nloosemus;
   double met, metPhi, j1metPhi, j2metPhi;
   double j1metPhi_f, j2metPhi_f;
@@ -168,23 +172,23 @@ float  rawPt;
   double genphoton_pt[6],genphoton_eta[6],genphoton_phi[6];
   double genmuon_pt[6],genmuon_eta[6],genmuon_phi[6];
   double genelectron_pt[6],genelectron_eta[6],genelectron_phi[6];
-  double photon_pt[6],photon_eta[6],photon_phi[6],photon_e[6];
+  double photon_pt[6],photon_eta[6],photon_phi[6],photon_e[6],photonsc_eta[6],photonsc_phi[6];
   bool   photon_pev[6],photon_pevnew[6],photon_ppsv[6],photon_iseb[6],photon_isee[6];
   double photon_hoe[6],photon_sieie[6],photon_sieie2[6], photon_chiso[6],photon_nhiso[6],photon_phoiso[6],photon_drla[6],photon_mla[6],photon_mva[6];
   int      photon_istrue[6], photon_isprompt[6];
-  double photonet, photoneta, photonphi, photone;
-  double photonet_f, photoneta_f, photonphi_f, photone_f;
+  double photonet, photoneta, photonphi, photone, photonsceta, photonscphi;
+  double photonet_f, photoneta_f, photonphi_f, photone_f, photonsceta_f, photonscphi_f;
   double photonsieie, photonphoiso, photonchiso, photonnhiso;
   double photonsieie_f, photonphoiso_f, photonchiso_f, photonnhiso_f;
   int iphoton;
   int iphoton_f;
   double drla, drla_f;
-  bool passEleVeto, passEleVetonew, passPixelSeedVeto;
+  bool passEleVeto, passEleVetonew, passPixelSeedVeto, photonhaspixelseed, photonhaspixelseed_f,photonpasseleveto,photonpasseleveto_f;
   //Photon gen match
   int   isTrue_;
   bool ISRPho;
-  int isprompt_;
-  double dR_;
+  int isprompt_,ispromptLep_,lepton_istrue;    //////////////////////////////////
+  double dR_,dR1_;
   //Jets
   int jet1hf,jet1pf,jet2hf,jet2pf,jet1hf_f,jet1pf_f,jet2hf_f,jet2pf_f;
   double jet1pt, jet1eta, jet1phi, jet1e, jet1csv, jet1icsv;
@@ -198,6 +202,17 @@ float  rawPt;
 double Dphiwajj,Dphiwajj_f;
 
   void setDummyValues();
+
+
+//// L1 prefiring
+
+edm::EDGetTokenT< double > prefweight_token;
+edm::EDGetTokenT< double > prefweightup_token;
+edm::EDGetTokenT< double > prefweightdown_token;
+
+
+
+
     
   /// Parameters to steer the treeDumper
   int originalNEvents_;
@@ -325,6 +340,13 @@ PKUTreeMaker::PKUTreeMaker(const edm::ParameterSet& iConfig)//:
   jetCorrLabel_ = jecAK4chsLabels_;
   offsetCorrLabel_.push_back(jetCorrLabel_[0]);
 
+//  L1 prefiring
+prefweight_token = consumes< double >(edm::InputTag("prefiringweight:NonPrefiringProb"));
+prefweightup_token = consumes< double >(edm::InputTag("prefiringweight:NonPrefiringProbUp"));
+prefweightdown_token = consumes< double >(edm::InputTag("prefiringweight:NonPrefiringProbDown"));
+
+
+
 // filter
    noiseFilterToken_ = consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("noiseFilter"));
    HBHENoiseFilter_Selector_ =  iConfig.getParameter<std::string> ("noiseFilterSelection_HBHENoiseFilter");
@@ -356,6 +378,9 @@ PKUTreeMaker::PKUTreeMaker(const edm::ParameterSet& iConfig)//:
   outTree_->Branch("ls"              ,&ls             ,"ls/I"             );
 outTree_->Branch("nVtx"            ,&nVtx           ,"nVtx/I"           );
   outTree_->Branch("theWeight"           ,&theWeight         ,"theWeight/D"          );
+  outTree_->Branch("L1prefiring"           ,&L1prefiring         ,"L1prefiring/D"          );
+  outTree_->Branch("L1prefiringup"           ,&L1prefiringup         ,"L1prefiringup/D"          );
+  outTree_->Branch("L1prefiringdown"           ,&L1prefiringdown         ,"L1prefiringdown/D"          );
   outTree_->Branch("nump"           ,&nump         ,"nump/D"          );
   outTree_->Branch("numm"           ,&numm         ,"numm/D"          );
   outTree_->Branch("npT"           ,&npT         ,"npT/D"          );
@@ -372,6 +397,7 @@ outTree_->Branch("nVtx"            ,&nVtx           ,"nVtx/I"           );
   outTree_->Branch("Mva_f"          ,&Mva_f         ,"Mva_f/D"         );
   outTree_->Branch("nlooseeles"          ,&nlooseeles         ,"nlooseeles/I"         );
   outTree_->Branch("nloosemus"          ,&nloosemus         ,"nloosemus/I"         );
+/*
   outTree_->Branch("genphoton_pt"        , genphoton_pt       ,"genphoton_pt[6]/D"       );
   outTree_->Branch("genphoton_eta"        , genphoton_eta       ,"genphoton_eta[6]/D"       );
   outTree_->Branch("genphoton_phi"        , genphoton_phi       ,"genphoton_phi[6]/D"       );
@@ -381,30 +407,37 @@ outTree_->Branch("nVtx"            ,&nVtx           ,"nVtx/I"           );
   outTree_->Branch("genelectron_pt"        , genelectron_pt       ,"genelectron_pt[6]/D"       );
   outTree_->Branch("genelectron_eta"        , genelectron_eta       ,"genelectron_eta[6]/D"       );
   outTree_->Branch("genelectron_phi"        , genelectron_phi       ,"genelectron_phi[6]/D"       );
+*/
   /// Photon
   outTree_->Branch("photon_pt"        , photon_pt       ,"photon_pt[6]/D"       );
   outTree_->Branch("photon_eta"        , photon_eta       ,"photon_eta[6]/D"       );
   outTree_->Branch("photon_phi"        , photon_phi       ,"photon_phi[6]/D"       );
   outTree_->Branch("photon_e"        , photon_e       ,"photon_e[6]/D"       );
+  outTree_->Branch("photonsc_eta"        , photonsc_eta       ,"photonsc_eta[6]/D"       );
+  outTree_->Branch("photonsc_phi"        , photonsc_phi       ,"photonsc_phi[6]/D"       );
   outTree_->Branch("photon_pev"        , photon_pev       ,"photon_pev[6]/O"       );
   outTree_->Branch("photon_pevnew"        , photon_pevnew       ,"photon_pevnew[6]/O"       );
   outTree_->Branch("photon_ppsv"        , photon_ppsv       ,"photon_ppsv[6]/O"       );
-  outTree_->Branch("photon_iseb"        , photon_iseb       ,"photon_iseb[6]/O"       );
-  outTree_->Branch("photon_isee"        , photon_isee       ,"photon_isee[6]/O"       );
+//  outTree_->Branch("photon_iseb"        , photon_iseb       ,"photon_iseb[6]/O"       );
+//  outTree_->Branch("photon_isee"        , photon_isee       ,"photon_isee[6]/O"       );
   outTree_->Branch("photon_hoe"        , photon_hoe       ,"photon_hoe[6]/D"       );
   outTree_->Branch("photon_sieie"        , photon_sieie       ,"photon_sieie[6]/D"       );
   outTree_->Branch("photon_sieie2"        , photon_sieie2       ,"photon_sieie2[6]/D"       );
   outTree_->Branch("photon_chiso"        , photon_chiso       ,"photon_chiso[6]/D"       );
   outTree_->Branch("photon_nhiso"        , photon_nhiso       ,"photon_nhiso[6]/D"       );
   outTree_->Branch("photon_phoiso"        , photon_phoiso       ,"photon_phoiso[6]/D"       );
-  outTree_->Branch("photon_istrue"        , photon_istrue       ,"photon_istrue[6]/I"       );
+//  outTree_->Branch("photon_istrue"        , photon_istrue       ,"photon_istrue[6]/I"       );
   outTree_->Branch("photon_isprompt"        , photon_isprompt       ,"photon_isprompt[6]/I"       );
   outTree_->Branch("photon_drla"        , photon_drla       ,"photon_drla[6]/D"       );
   outTree_->Branch("photon_mla"        , photon_mla       ,"photon_mla[6]/D"       );
-  outTree_->Branch("photon_mva"        , photon_mva       ,"photon_mva[6]/D"       );
-  outTree_->Branch("passEleVeto"        , &passEleVeto       ,"passEleVeto/O"       );
-  outTree_->Branch("passEleVetonew"        , &passEleVetonew       ,"passEleVetonew/O"       );
-  outTree_->Branch("passPixelSeedVeto"        , &passPixelSeedVeto       ,"passPixelSeedVeto/O"       );
+//  outTree_->Branch("photon_mva"        , photon_mva       ,"photon_mva[6]/D"       );
+//  outTree_->Branch("passEleVeto"        , &passEleVeto       ,"passEleVeto/O"       );
+//  outTree_->Branch("passEleVetonew"        , &passEleVetonew       ,"passEleVetonew/O"       );
+//  outTree_->Branch("passPixelSeedVeto"        , &passPixelSeedVeto       ,"passPixelSeedVeto/O"       );
+  outTree_->Branch("photonhaspixelseed"        , &photonhaspixelseed       ,"photonhaspixelseed/O"       );
+  outTree_->Branch("photonhaspixelseed_f"        , &photonhaspixelseed_f      ,"photonhaspixelseed_f/O"       );
+  outTree_->Branch("photonpasseleveto"        , &photonpasseleveto       ,"photonpasseleveto/O"       );
+  outTree_->Branch("photonpasseleveto_f"        , &photonpasseleveto_f       ,"photonpasseleveto_F/O"       );
   outTree_->Branch("photonet"          ,&photonet         ,"photonet/D"         );
   outTree_->Branch("photonet_f"          ,&photonet_f         ,"photonet_f/D"         );
   outTree_->Branch("photoneta"          ,&photoneta         ,"photoneta/D"         );
@@ -413,6 +446,11 @@ outTree_->Branch("nVtx"            ,&nVtx           ,"nVtx/I"           );
   outTree_->Branch("photonphi_f"          ,&photonphi_f         ,"photonphi_f/D"         );
   outTree_->Branch("photone"          ,&photone         ,"photone/D"         );
   outTree_->Branch("photone_f"          ,&photone_f         ,"photone_f/D"         );
+  outTree_->Branch("photonsceta"          ,&photonsceta         ,"photonsceta/D"         );
+  outTree_->Branch("photonsceta_f"          ,&photonsceta_f         ,"photonsceta_f/D"         );
+  outTree_->Branch("photonscphi"          ,&photonscphi         ,"photonscphi/D"         );
+  outTree_->Branch("photonscphi_f"          ,&photonscphi_f         ,"photonscphi_f/D"         );
+/*
   outTree_->Branch("photonsieie"          ,&photonsieie         ,"photonsieie/D"         );
   outTree_->Branch("photonsieie_f"          ,&photonsieie_f         ,"photonsieie_f/D"         );
   outTree_->Branch("photonphoiso"          ,&photonphoiso         ,"photonphoiso/D"         );
@@ -421,6 +459,7 @@ outTree_->Branch("nVtx"            ,&nVtx           ,"nVtx/I"           );
   outTree_->Branch("photonchiso_f"          ,&photonchiso_f         ,"photonchiso_f/D"         );
   outTree_->Branch("photonnhiso"          ,&photonnhiso         ,"photonnhiso/D"         );
   outTree_->Branch("photonnhiso_f"          ,&photonnhiso_f         ,"photonnhiso_f/D"         );
+*/
   outTree_->Branch("iphoton"             ,&iphoton            ,"iphoton/I"            );
   outTree_->Branch("iphoton_f"             ,&iphoton_f            ,"iphoton_f/I"            );
   outTree_->Branch("drla"          ,&drla         ,"drla/D"         );
@@ -430,6 +469,7 @@ outTree_->Branch("nVtx"            ,&nVtx           ,"nVtx/I"           );
 //    outTree_->Branch("ISRPho"        , &ISRPho       ,"ISRPho/O"       );
   outTree_->Branch("isTrue", &isTrue_, "isTrue/I");
   outTree_->Branch("isprompt"    , &isprompt_, "isprompt/I");
+  outTree_->Branch("ispromptLep"    , &ispromptLep_, "ispromptLep/I");
 //jets
   outTree_->Branch("ak4jet_hf"        ,ak4jet_hf       ,"ak4jet_hf[6]/I"       );
   outTree_->Branch("ak4jet_pf"        ,ak4jet_pf       ,"ak4jet_pf[6]/I"       );
@@ -490,6 +530,7 @@ outTree_->Branch("nVtx"            ,&nVtx           ,"nVtx/I"           );
   outTree_->Branch("ptlep1"          ,&ptlep1         ,"ptlep1/D"         );
   outTree_->Branch("etalep1"         ,&etalep1        ,"etalep1/D"        );
   outTree_->Branch("philep1"         ,&philep1        ,"philep1/D"        );
+  outTree_->Branch("energylep1"         ,&energylep1        ,"energylep1/D"        );
   outTree_->Branch("j1metPhi"          ,&j1metPhi         ,"j1metPhi/D"         );
   outTree_->Branch("j1metPhi_f"          ,&j1metPhi_f         ,"j1metPhi_f/D"         );
   outTree_->Branch("j2metPhi"          ,&j2metPhi         ,"j2metPhi/D"         );
@@ -514,6 +555,7 @@ outTree_->Branch("nVtx"            ,&nVtx           ,"nVtx/I"           );
   outTree_->Branch("HLT_Mu2"   ,&HLT_Mu2  ,"HLT_Mu2/I"  );
   outTree_->Branch("HLT_Mu3"   ,&HLT_Mu3  ,"HLT_Mu3/I"  );
   // filter
+/*
   outTree_->Branch("passFilter_HBHE"                 ,&passFilter_HBHE_                ,"passFilter_HBHE_/O");
   outTree_->Branch("passFilter_HBHEIso"                 ,&passFilter_HBHEIso_                ,"passFilter_HBHEIso_/O");
   outTree_->Branch("passFilter_globalTightHalo"		,&passFilter_globalTightHalo_    ,"passFilter_globalTightHalo_/O");
@@ -522,6 +564,7 @@ outTree_->Branch("nVtx"            ,&nVtx           ,"nVtx/I"           );
   outTree_->Branch("passFilter_EEBadSc"              ,&passFilter_EEBadSc_             ,"passFilter_EEBadSc_/O");
   outTree_->Branch("passFilter_badMuon"                 ,&passFilter_badMuon_                ,"passFilter_badMuon_/O");
   outTree_->Branch("passFilter_badChargedHadron"                 ,&passFilter_badChargedHadron_                ,"passFilter_badChargedHadron_/O");
+*/
 //  outTree_->Branch("triggerWeight"   ,&triggerWeight  ,"triggerWeight/D"  );
   outTree_->Branch("lumiWeight"      ,&lumiWeight     ,"lumiWeight/D"     );
   outTree_->Branch("pileupWeight"    ,&pileupWeight   ,"pileupWeight/D"   );
@@ -742,6 +785,40 @@ bool PKUTreeMaker::hasMatchedPromptElectron(const reco::SuperClusterRef &sc, con
     }
     return false;
 }
+
+/////////////////////////////////////////////////////////////
+int PKUTreeMaker::matchToTrueLep(double lept_eta,double lept_phi,
+                                      const edm::Handle<edm::View<reco::GenParticle>>
+                                      &genParticles, double &dR, int &ispromptLep)
+{
+    dR = 999;
+    const reco::Candidate *closestLep = 0;
+
+    int im=0;
+    for(size_t i=0; i<genParticles->size();i++){
+        const reco::Candidate *particle = &(*genParticles)[i];
+	if (particle->pt() < 10) continue;
+
+	if( (abs(particle->pdgId()) != 11 && abs(particle->pdgId()) != 13) || particle->status() != 1 )
+
+        continue;
+        double dRtmp = deltaR(lept_eta,lept_phi,particle->eta(),particle->phi());  
+        if( dRtmp < dR ){
+            dR = dRtmp;
+            im=i;    
+            closestLep = particle;
+         }
+  }
+
+    if( !(closestLep != 0 && dR < 0.3) ) {
+        return UNMATCHED;
+    }
+     ispromptLep=((*genParticles)[im].isPromptFinalState() || (*genParticles)[im].isDirectPromptTauDecayProductFinalState());
+	if(ispromptLep && dR < 0.3)ispromptLep=1;
+	else ispromptLep = 0;
+return 1;
+}
+/////////////////////////////////////////////////////////////
 //------------------------------------
 int PKUTreeMaker::matchToTruth(const reco::Photon &pho,
                                       const edm::Handle<edm::View<reco::GenParticle>>
@@ -757,7 +834,10 @@ int PKUTreeMaker::matchToTruth(const reco::Photon &pho,
     int im=0;
     for(size_t i=0; i<genParticles->size();i++){
         const reco::Candidate *particle = &(*genParticles)[i];
-        if( abs(particle->pdgId()) != 22 || particle->status() != 1 )
+	if (particle->pt() < 10) continue;   /////////////////////////////////////////////////////////////
+        if(particle->status() != 1 )
+//	if( (abs(particle->pdgId()) != 11 && abs(particle->pdgId()) != 22) || particle->status() != 1 )   /////////////////////////////////////////////////////////////
+//        if( abs(particle->pdgId()) != 22 || particle->status() != 1 )
         continue;
         double dRtmp = deltaR(pho.eta(),pho.phi(),particle->eta(),particle->phi());  
         if( dRtmp < dR ){
@@ -775,6 +855,15 @@ int PKUTreeMaker::matchToTruth(const reco::Photon &pho,
 //     isprompt=(*genParticles)[im].isPromptFinalState();
 
      isprompt=((*genParticles)[im].isPromptFinalState() || (*genParticles)[im].isDirectPromptTauDecayProductFinalState());
+        const reco::Candidate *particle = &(*genParticles)[im];
+        if(abs(particle->pdgId()) == 22 && isprompt && dR >0.6)isprompt = 7;
+        if(abs(particle->pdgId()) == 22 && isprompt && dR < 0.6)isprompt = 6;
+        if(abs(particle->pdgId()) == 22 && isprompt && dR < 0.5)isprompt = 5;
+        if(abs(particle->pdgId()) == 22 && isprompt && dR < 0.4)isprompt = 4;
+
+        if(abs(particle->pdgId()) == 22 && isprompt && dR < 0.3)isprompt = 2;
+        if(abs(particle->pdgId()) == 11 && isprompt && dR < 0.3)isprompt = 3;
+
     // Find ID of the parent of the found generator level photon match
     int ancestorPID = -999;
     int ancestorStatus = -999;
@@ -859,6 +948,19 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 //events weight
    if (RunOnMC_){
+//  L1 prefiring
+edm::Handle< double > theprefweight;
+iEvent.getByToken(prefweight_token, theprefweight ) ;
+L1prefiring =(*theprefweight);
+
+edm::Handle< double > theprefweightup;
+iEvent.getByToken(prefweightup_token, theprefweightup ) ;
+L1prefiringup =(*theprefweightup);
+
+edm::Handle< double > theprefweightdown;
+iEvent.getByToken(prefweightdown_token, theprefweightdown ) ;
+L1prefiringdown =(*theprefweightdown);
+
 
 //        std::cout<<lheEvtInfo->hepeup().NUP<<std::endl; 
         edm::Handle<GenEventInfoProduct> genEvtInfo;
@@ -911,7 +1013,7 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    edm::Handle<edm::View<reco::Candidate> > leptonicVs;
    iEvent.getByToken(leptonicVSrc_, leptonicVs);
 
-   if (leptonicVs->empty()) {  outTree_->Fill(); return;  }
+   if (leptonicVs->empty()) { outTree_->Fill();  return;  }//outTree_->Fill();
  
    iEvent.getByToken(rhoToken_      , rho_     );
    double fastJetRho = *(rho_.product());
@@ -922,6 +1024,8 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
    edm::Handle<edm::View<pat::Photon> > photons;
    iEvent.getByToken(photonSrc_, photons);
+
+   if (photons->empty()) {   outTree_->Fill();return;  }//outTree_->Fill();
 
    edm::Handle<edm::View<reco::GenParticle> > genParticles;//define genParticle
    iEvent.getByToken(genSrc_, genParticles);
@@ -990,7 +1094,7 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        
    edm::Handle<reco::VertexCollection> vertices;
    iEvent.getByToken(VertexToken_, vertices);
-   if (vertices->empty()) { outTree_->Fill(); return;} // skip the event if no PV found
+   if (vertices->empty()) {  outTree_->Fill();return;} // skip the event if no PV foundoutTree_->Fill(); 
    nVtx = vertices->size();
    reco::VertexCollection::const_iterator firstGoodVertex = vertices->end();
    for (reco::VertexCollection::const_iterator vtx = vertices->begin(); vtx != vertices->end(); ++vtx) {
@@ -1004,7 +1108,7 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
            break;
           }           
       }
-   if ( firstGoodVertex==vertices->end() ) {outTree_->Fill();  return;} // skip event if there are no good PVs
+   if ( firstGoodVertex==vertices->end() ) {  outTree_->Fill();return;} // skip event if there are no good PVsoutTree_->Fill(); 
 
 
 // ************************* MET ********************** //
@@ -1060,7 +1164,7 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        ptlep1       = leptonicV.daughter(1)->pt();
        etalep1      = leptonicV.daughter(1)->eta();
        philep1      = leptonicV.daughter(1)->phi();
-       double energylep1     = leptonicV.daughter(1)->energy();
+       energylep1     = leptonicV.daughter(1)->energy();
        if(leptonicV.daughter(0)->isElectron()||leptonicV.daughter(0)->isMuon() ) {
        ptlep1       = leptonicV.daughter(0)->pt();
        etalep1      = leptonicV.daughter(0)->eta();
@@ -1089,6 +1193,12 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
        mtVlepJEC       = WLeptonic.mt();
        mtVlepJECnew=sqrt(2*ptlep1*MET_et*(1.0-cos(philep1-MET_phi)));
 
+                if(RunOnMC_ && ptlep1>10){
+	//const auto lept = lepton;
+	lepton_istrue=matchToTrueLep(etalep1,philep1,genParticles,dR1_,ispromptLep_);
+		}
+
+
 // ************************* Photon Jets Information****************** //
 // *************************************************************//
          double rhoVal_;
@@ -1109,12 +1219,11 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
           for (size_t ip=0; ip<photons->size();ip++)
          {
             const auto pho = photons->ptrAt(ip);
- 
+
             double phosc_eta=pho->superCluster()->eta();
-//            std::cout<<pho->superCluster()->eta()<<" "<<(*photons)[ip].eta()<<std::endl;
             double phosc_phi=pho->superCluster()->phi();
+
             double pho_ieie=(*full5x5SigmaIEtaIEtaMap)[pho];
-//            std::cout<<(*full5x5SigmaIEtaIEtaMap)[ pho ]<<" "<<(*photons)[ip].sigmaIetaIeta()<<std::endl;
             double chIso1 =  (*phoChargedIsolationMap)[pho];
             double nhIso1 =  (*phoNeutralHadronIsolationMap)[pho];
             double phIso1 = (*phoPhotonIsolationMap)[pho];
@@ -1146,9 +1255,11 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
             if(ip<6)  {
                 photon_pt[ip] = (*photons)[ip].pt();
-                photon_eta[ip] = phosc_eta;//(*photons)[ip].eta();
-                photon_phi[ip] = phosc_phi;//(*photons)[ip].phi();
+                photon_eta[ip] = (*photons)[ip].eta();
+                photon_phi[ip] = (*photons)[ip].phi();
                 photon_e[ip] = (*photons)[ip].energy();
+                photonsc_eta[ip] = phosc_eta;
+                photonsc_phi[ip] = phosc_phi;
                 photon_pev[ip]=passEleVeto;
                 photon_pevnew[ip]=passEleVetonew;
                 photon_ppsv[ip]=passPixelSeedVeto;
@@ -1160,11 +1271,11 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                 photon_chiso[ip]=chiso;
                 photon_nhiso[ip]=nhiso;
                 photon_phoiso[ip]=phoiso;
-                if(RunOnMC_ && photon_pt[ip]>0){
+                if(RunOnMC_ && photon_pt[ip]>10){
                   const auto pho = photons->ptrAt(ip);
                   photon_istrue[ip]=matchToTruth(*pho, genParticles, ISRPho, dR_, photon_isprompt[ip]);
                  }
-                photon_drla[ip]=deltaR(photon_eta[ip],photon_phi[ip],etalep1,philep1);
+                photon_drla[ip]=deltaR(photonsc_eta[ip],photonsc_phi[ip],etalep1,philep1);
                 TLorentzVector tp4;
                 tp4.SetPtEtaPhiE(photon_pt[ip],photon_eta[ip],photon_phi[ip],photon_e[ip]);
                 photon_mla[ip]=(tp4+glepton).M();
@@ -1173,28 +1284,27 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                 photon_mva[ip]=(tp4+fwp4).M();
                }
 
-            if(passEleVetonew && phosc_eta<1.4442 && (*photons)[ip].hadTowOverEm()<0.0396 && photon_sieie[ip]<0.01022 && chiso<0.441 && nhiso<(2.725 + (0.0148*(*photons)[ip].pt()+0.000017*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(2.571+0.0047*(*photons)[ip].pt())) {ismedium_photon=1;} 
-            if(passEleVetonew && phosc_eta>1.566 && phosc_eta<2.5 && (*photons)[ip].hadTowOverEm()<0.0219 && photon_sieie[ip]<0.03001 && chiso<0.442 && nhiso<(1.715 + (0.0163*(*photons)[ip].pt()+0.000014*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(3.863+0.0034*(*photons)[ip].pt())) {ismedium_photon=1;}
+            if(fabs(phosc_eta)<1.4442 && (*photons)[ip].hadTowOverEm()<0.0396 && photon_sieie[ip]<0.01022 && chiso<0.441 && nhiso<(2.725 + (0.0148*(*photons)[ip].pt()+0.000017*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(2.571+0.0047*(*photons)[ip].pt())) {ismedium_photon=1;} 
+            if(fabs(phosc_eta)>1.566 && fabs(phosc_eta)<2.5 && (*photons)[ip].hadTowOverEm()<0.0219 && photon_sieie[ip]<0.03001 && chiso<0.442 && nhiso<(1.715 + (0.0163*(*photons)[ip].pt()+0.000014*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(3.863+0.0034*(*photons)[ip].pt())) {ismedium_photon=1;}
 
              if(ismedium_photon==1 && deltaR(phosc_eta,phosc_phi,etalep1,philep1) > 0.5) {if(cachecount1==0){photonet=(*photons)[ip].pt(); iphoton=ip;}cachecount1++;
                  if((*photons)[ip].pt()>photonet) {photonet=(*photons)[ip].pt(); iphoton=ip;}
          										}
 //////////////////////////////////for fake photon study, store photon without sieie cut
-//Inverting loose ID
-//            if(passEleVetonew && (*photons)[ip].isEB() && (*photons)[ip].hadTowOverEm()<5*0.0597 && chiso<10 && nhiso<std::min(0.2*(*photons)[ip].pt(), 5.*(10.910 + (0.0148*(*photons)[ip].pt()+0.000017*(*photons)[ip].pt()*(*photons)[ip].pt())))  && phoiso<std::min(0.2*(*photons)[ip].pt(), 5.*(3.630+0.0047*(*photons)[ip].pt())) && !(photon_sieie[ip]<0.01031 && chiso<4)) {ismedium_photon_f=1;}  // && nhiso<(10.910 + (0.0148*(*photons)[ip].pt()+0.000017*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(3.630+0.0047*(*photons)[ip].pt())
-//            if(passEleVetonew && (*photons)[ip].isEE() && (*photons)[ip].hadTowOverEm()<5*0.0481 && chiso<10 && nhiso<std::min(0.2*(*photons)[ip].pt(), 5.*(5.931 + (0.0163*(*photons)[ip].pt()+0.000014*(*photons)[ip].pt()*(*photons)[ip].pt())))  && phoiso<std::min(0.2*(*photons)[ip].pt(), 5.*(6.641+0.0034*(*photons)[ip].pt())) && !(photon_sieie[ip]<0.03013 && chiso<4)) {ismedium_photon_f=1;}  // && nhiso<(5.931 + (0.0163*(*photons)[ip].pt()+0.000014*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(6.641+0.0034*(*photons)[ip].pt())
+bool barrel_inv_hoe = (*photons)[ip].hadTowOverEm()>0.0597  && chiso<0.441  && nhiso<(2.725+ (0.0148*(*photons)[ip].pt()+0.000017*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(2.571+0.0047*(*photons)[ip].pt()) && photon_sieie[ip]<0.01022;
+bool barrel_inv_chiso = chiso>1.295 && (*photons)[ip].hadTowOverEm()<0.0396  && nhiso<(2.725+ (0.0148*(*photons)[ip].pt()+0.000017*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(2.571+0.0047*(*photons)[ip].pt()) && photon_sieie[ip]<0.01022; 
+bool barrel_inv_nhiso = nhiso>(10.91+ (0.0148*(*photons)[ip].pt()+0.000017*(*photons)[ip].pt()*(*photons)[ip].pt())) && (*photons)[ip].hadTowOverEm()<0.0396  && chiso<0.441 && phoiso<(2.571+0.0047*(*photons)[ip].pt()) && photon_sieie[ip]<0.01022;
+bool barrel_inv_phoiso = phoiso>(3.63+0.0047*(*photons)[ip].pt()) && (*photons)[ip].hadTowOverEm()<0.0396  && chiso<0.441  && nhiso<(2.725+ (0.0148*(*photons)[ip].pt()+0.000017*(*photons)[ip].pt()*(*photons)[ip].pt())) && photon_sieie[ip]<0.01022;
+bool barrel_inv_sieie = photon_sieie[ip]>0.01031  && (*photons)[ip].hadTowOverEm()<0.0396  && chiso<0.441 && nhiso<(2.725+ (0.0148*(*photons)[ip].pt()+0.000017*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(2.571+0.0047*(*photons)[ip].pt());
 
+bool endcap_inv_hoe = (*photons)[ip].hadTowOverEm()>0.0481  && chiso<0.442  && nhiso<(1.715+ (0.0163*(*photons)[ip].pt()+0.000014*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(3.863+0.0034*(*photons)[ip].pt()) && photon_sieie[ip]<0.03001;
+bool endcap_inv_chiso = chiso>1.011 && (*photons)[ip].hadTowOverEm()<0.0219  && nhiso<(1.715+ (0.0163*(*photons)[ip].pt()+0.000014*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(3.863+0.0034*(*photons)[ip].pt()) && photon_sieie[ip]<0.03001;
+bool endcap_inv_nhiso = nhiso>(5.931+ (0.0163*(*photons)[ip].pt()+0.000014*(*photons)[ip].pt()*(*photons)[ip].pt())) && (*photons)[ip].hadTowOverEm()<0.0219  && chiso<0.442 && phoiso<(3.863+0.0034*(*photons)[ip].pt()) && photon_sieie[ip]<0.03001;
+bool endcap_inv_phoiso = phoiso>(6.641+0.0034*(*photons)[ip].pt()) && (*photons)[ip].hadTowOverEm()<0.0219  && chiso<0.442  && nhiso<(1.715+ (0.0163*(*photons)[ip].pt()+0.000014*(*photons)[ip].pt()*(*photons)[ip].pt())) && photon_sieie[ip]<0.03001;
+bool endcap_inv_sieie = photon_sieie[ip]>0.03013  && (*photons)[ip].hadTowOverEm()<0.0219  && chiso<0.442 && nhiso<(1.715+ (0.0163*(*photons)[ip].pt()+0.000014*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(3.863+0.0034*(*photons)[ip].pt());
 
-//            if(passEleVetonew && phosc_eta<1.4442 && (*photons)[ip].hadTowOverEm()<0.0597 && chiso<10 && nhiso<std::min(0.2*(*photons)[ip].pt(), (10.910 + (0.0148*(*photons)[ip].pt()+0.000017*(*photons)[ip].pt()*(*photons)[ip].pt())))  && phoiso<std::min(0.2*(*photons)[ip].pt(), (3.630+0.0047*(*photons)[ip].pt())) && !(photon_sieie[ip]<0.01031 && chiso<4)) {ismedium_photon_f=1;}
-//            if(passEleVetonew && phosc_eta>1.566 && phosc_eta<2.5 && (*photons)[ip].hadTowOverEm()<0.0481 && chiso<10 && nhiso<std::min(0.2*(*photons)[ip].pt(), (5.931 + (0.0163*(*photons)[ip].pt()+0.000014*(*photons)[ip].pt()*(*photons)[ip].pt())))  && phoiso<std::min(0.2*(*photons)[ip].pt(), (6.641+0.0034*(*photons)[ip].pt())) && !(photon_sieie[ip]<0.03013 && chiso<4)) {ismedium_photon_f=1;}
-
-
-//            if(passEleVetonew && phosc_eta<1.4442 && (*photons)[ip].hadTowOverEm()<0.0396 && chiso<10 && nhiso<(2.725 + (0.0148*(*photons)[ip].pt()+0.000017*(*photons)[ip].pt()*(*photons)[ip].pt()))  && phoiso<(2.571+0.0047*(*photons)[ip].pt()) && !(photon_sieie[ip]<0.01022 && chiso<4)) {ismedium_photon_f=1;}
-//            if(passEleVetonew && phosc_eta>1.566 && phosc_eta<2.5 && (*photons)[ip].hadTowOverEm()<0.0219 && chiso<10 && nhiso<(1.715 + (0.0163*(*photons)[ip].pt()+0.000014*(*photons)[ip].pt()*(*photons)[ip].pt()))  && phoiso<(3.863+0.0034*(*photons)[ip].pt()) && !(photon_sieie[ip]<0.03001 && chiso<4)) {ismedium_photon_f=1;}
-
-
-            if(passEleVetonew && phosc_eta<1.4442 && (*photons)[ip].hadTowOverEm()<0.0597 && chiso<15 && (nhiso<std::min(0.2*(*photons)[ip].pt(), 5.*(10.910 + (0.0148*(*photons)[ip].pt()+0.000017*(*photons)[ip].pt()*(*photons)[ip].pt())))  || phoiso<std::min(0.2*(*photons)[ip].pt(), 5.*(3.630+0.0047*(*photons)[ip].pt())) || !(photon_sieie[ip]<0.01031 && chiso<4))) {ismedium_photon_f=1;} // && nhiso<(10.910 + (0.0148*(*photons)[ip].pt()+0.000017*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(3.630+0.0047*(*photons)[ip].pt())
-            if(passEleVetonew && phosc_eta>1.566 && phosc_eta<2.5  && (*photons)[ip].hadTowOverEm()<0.0481 && chiso<15 && (nhiso<std::min(0.2*(*photons)[ip].pt(), 5.*(5.931 + (0.0163*(*photons)[ip].pt()+0.000014*(*photons)[ip].pt()*(*photons)[ip].pt())))  || phoiso<std::min(0.2*(*photons)[ip].pt(), 5.*(6.641+0.0034*(*photons)[ip].pt())) || !(photon_sieie[ip]<0.03013 && chiso<4))) {ismedium_photon_f=1;}  // && nhiso<(5.931 + (0.0163*(*photons)[ip].pt()+0.000014*(*photons)[ip].pt()*(*photons)[ip].pt())) && phoiso<(6.641+0.0034*(*photons)[ip].pt())
+            if(fabs(phosc_eta)<1.4442 && (barrel_inv_hoe || barrel_inv_chiso || barrel_inv_nhiso || barrel_inv_phoiso || barrel_inv_sieie)){ismedium_photon_f=1;}
+            if(fabs(phosc_eta)>1.566 && fabs(phosc_eta)<2.5  && (endcap_inv_hoe || endcap_inv_chiso || endcap_inv_nhiso || endcap_inv_phoiso || endcap_inv_sieie)){ismedium_photon_f=1;}
 
 
             if(ismedium_photon_f==1 && deltaR(phosc_eta,phosc_phi,etalep1,philep1) > 0.5)
@@ -1216,17 +1326,21 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                photoneta=photon_eta[iphoton];//(*photons)[iphoton].eta();
                photonphi=photon_phi[iphoton];//(*photons)[iphoton].phi();
                photone=photon_e[iphoton];//(*photons)[iphoton].energy();
+		photonsceta=photonsc_eta[iphoton];
+		photonscphi=photonsc_phi[iphoton];
                photonsieie=photon_sieie[iphoton];//(*photons)[iphoton].sigmaIetaIeta();
                photonphoiso=photon_phoiso[iphoton];//std::max((*photons)[iphoton].photonIso()-rhoVal_*EApho(fabs((*photons)[iphoton].eta())),0.0);
                photonchiso=photon_chiso[iphoton];//std::max((*photons)[iphoton].chargedHadronIso()-rhoVal_*EAch(fabs((*photons)[iphoton].eta())),0.0);
                photonnhiso=photon_nhiso[iphoton];//std::max((*photons)[iphoton].neutralHadronIso()-rhoVal_*EAnh(fabs((*photons)[iphoton].eta())),0.0);
-               drla=deltaR(photon_eta[iphoton],photon_phi[iphoton],etalep1,philep1);
+               drla=deltaR(photonsc_eta[iphoton],photonsc_phi[iphoton],etalep1,philep1);
                TLorentzVector photonp4;
                photonp4.SetPtEtaPhiE(photonet, photoneta, photonphi, photone);
                Mla=(photonp4+glepton).M();
                TLorentzVector wp4;
                wp4.SetPtEtaPhiE(WLeptonic.pt(), WLeptonic.eta(), WLeptonic.phi(), WLeptonic.energy());
                Mva=(photonp4+wp4).M();
+		photonhaspixelseed=photon_ppsv[iphoton];
+		photonpasseleveto=photon_pevnew[iphoton];
          }
 
 
@@ -1235,17 +1349,21 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 		       photoneta_f=photon_eta[iphoton_f];//(*photons)[iphoton_f].eta();
 		       photonphi_f=photon_phi[iphoton_f];//(*photons)[iphoton_f].phi();
 		       photone_f=photon_e[iphoton_f];//(*photons)[iphoton_f].energy();
+                       photonsceta_f=photonsc_eta[iphoton_f];
+                       photonscphi_f=photonsc_phi[iphoton_f];
 		       photonsieie_f=photon_sieie[iphoton_f];//(*photons)[iphoton_f].sigmaIetaIeta();
 		       photonphoiso_f=photon_phoiso[iphoton_f];//std::max((*photons)[iphoton_f].photonIso()-rhoVal_*EApho(fabs((*photons)[iphoton_f].eta())),0.0);
 		       photonchiso_f=photon_chiso[iphoton_f];//std::max((*photons)[iphoton_f].chargedHadronIso()-rhoVal_*EAch(fabs((*photons)[iphoton_f].eta())),0.0);
 		       photonnhiso_f=photon_nhiso[iphoton_f];//std::max((*photons)[iphoton_f].neutralHadronIso()-rhoVal_*EAnh(fabs((*photons)[iphoton_f].eta())),0.0);
-		       drla_f=deltaR(photon_eta[iphoton_f],photon_phi[iphoton_f],etalep1,philep1);
+		       drla_f=deltaR(photonsc_eta[iphoton_f],photonsc_phi[iphoton_f],etalep1,philep1);
 		       TLorentzVector photonp4_f;
 		       photonp4_f.SetPtEtaPhiE(photonet_f, photoneta_f, photonphi_f, photone_f);
 	           Mla_f=(photonp4_f+glepton).M();
 	           TLorentzVector wp4_f;
 	           wp4_f.SetPtEtaPhiE(WLeptonic.pt(), WLeptonic.eta(), WLeptonic.phi(), WLeptonic.energy());
 	           Mva_f=(photonp4_f+wp4_f).M();
+			photonhaspixelseed_f=photon_ppsv[iphoton_f];
+			photonpasseleveto_f=photon_pevnew[iphoton_f];
 	     }
 
 // ************************* AK4 Jets Information****************** //
@@ -1297,7 +1415,7 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
            for (size_t i=0;i<jets.size();i++) {
              if(iphoton>-1) {    
-              double drtmp1=deltaR(jets.at(i)->Eta(), jets.at(i)->Phi(), photoneta,photonphi);
+              double drtmp1=deltaR(jets.at(i)->Eta(), jets.at(i)->Phi(), photonsceta,photonscphi);
                if(drtmp1>0.5 && jetindexphoton12[0]==-1 && jetindexphoton12[1]==-1) {
                      jetindexphoton12[0] = i;
                      continue;  // the first num
@@ -1311,7 +1429,7 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 	   for (size_t i=0;i<jets.size();i++) {
 	     if(iphoton_f>-1) {    
-	      double drtmp1_f=deltaR(jets.at(i)->Eta(), jets.at(i)->Phi(), photoneta_f,photonphi_f);
+	      double drtmp1_f=deltaR(jets.at(i)->Eta(), jets.at(i)->Phi(), photonsceta_f,photonscphi_f);
 	       if(drtmp1_f>0.5 && jetindexphoton12_f[0]==-1 && jetindexphoton12_f[1]==-1) {
 		    jetindexphoton12_f[0] = i;
 		    continue;  // the first num
@@ -1341,8 +1459,8 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             jet2csv =(*ak4jets)[jetindexphoton12[1]].bDiscriminator("pfCombinedSecondaryVertexV2BJetTags");
             jet1icsv =(*ak4jets)[jetindexphoton12[0]].bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
             jet2icsv =(*ak4jets)[jetindexphoton12[1]].bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
-            drj1a=deltaR(jet1eta,jet1phi,photoneta,photonphi);
-            drj2a=deltaR(jet2eta,jet2phi,photoneta,photonphi);
+            drj1a=deltaR(jet1eta,jet1phi,photonsceta,photonscphi);
+            drj2a=deltaR(jet2eta,jet2phi,photonsceta,photonscphi);
             drj1l=deltaR(jet1eta,jet1phi,etalep1,philep1);
             drj2l=deltaR(jet2eta,jet2phi,etalep1,philep1);
             TLorentzVector j1p4;
@@ -1385,8 +1503,8 @@ PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             jet2csv_f =(*ak4jets)[jetindexphoton12_f[1]].bDiscriminator("pfCombinedSecondaryVertexV2BJetTags");
             jet1icsv_f =(*ak4jets)[jetindexphoton12_f[0]].bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
             jet2icsv_f =(*ak4jets)[jetindexphoton12_f[1]].bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
-	    drj1a_f=deltaR(jet1eta_f,jet1phi_f,photoneta_f,photonphi_f);
-            drj2a_f=deltaR(jet2eta_f,jet2phi_f,photoneta_f,photonphi_f);
+	    drj1a_f=deltaR(jet1eta_f,jet1phi_f,photonsceta_f,photonscphi_f);
+            drj2a_f=deltaR(jet2eta_f,jet2phi_f,photonsceta_f,photonscphi_f);
             drj1l_f=deltaR(jet1eta_f,jet1phi_f,etalep1,philep1);
             drj2l_f=deltaR(jet2eta_f,jet2phi_f,etalep1,philep1);
             TLorentzVector j1p4_f;
@@ -1431,6 +1549,9 @@ void PKUTreeMaker::setDummyValues() {
      pileupWeight   = -1e1;
      lumiWeight     = -1e1;
      theWeight = -99;
+L1prefiring = -99;
+L1prefiringup = -99;
+L1prefiringdown = -99;
      lep            = -1e1;
      nlooseeles=-1e1;
      nloosemus=-1e1;
@@ -1451,6 +1572,7 @@ void PKUTreeMaker::setDummyValues() {
      ptlep1         = -1e1;
      etalep1        = -1e1;
      philep1        = -1e1;
+     energylep1     = -1e1;
      met            = -1e1;
      metPhi         = -1e1;
      j1metPhi         = -1e1; j1metPhi_f         = -1e1;
@@ -1484,6 +1606,8 @@ ak4jet_pf[i]=-1e1;
      photon_eta[i] = -1e1;
      photon_phi[i] = -1e1;
      photon_e[i] = -1e1;
+     photonsc_eta[i] = -1e1;
+     photonsc_phi[i] = -1e1;
      photon_pev[i] = false;
      photon_pevnew[i] = false;
      photon_ppsv[i] = false;
@@ -1512,6 +1636,8 @@ ak4jet_pf[i]=-1e1;
      photoneta=-1e1;  photoneta_f=-1e1;
      photonphi=-1e1;  photonphi_f=-1e1;
      photone=-1e1;   photone_f=-1e1;
+     photonsceta=-1e1;  photonsceta_f=-1e1;
+     photonscphi=-1e1;  photonscphi_f=-1e1;
      photonsieie=-1e1;  photonsieie_f=-1e1;
      photonphoiso=-1e1;  photonphoiso_f=-1e1;
      photonchiso=-1e1;  photonchiso_f=-1e1;
@@ -1521,11 +1647,20 @@ ak4jet_pf[i]=-1e1;
      passEleVeto=false;
      passEleVetonew=false;
      passPixelSeedVeto=false;
-    
+	photonhaspixelseed=false;
+	photonhaspixelseed_f=false;
+	photonpasseleveto=false;
+	photonpasseleveto_f=false;
+   
+ 
      ISRPho = false;
      dR_ = 999;
+     dR1_ = 999;
      isTrue_=-1;
      isprompt_=-1; 
+     ispromptLep_=-1; 
+     lepton_istrue=-1;
+
      jet1pt=-1e1;  jet1pt_f=-1e1;
      jet1eta=-1e1;  jet1eta_f=-1e1;
      jet1phi=-1e1;  jet1phi_f=-1e1;

@@ -16,10 +16,12 @@ config.Data.userInputFiles = open('./private_QCDWA.txt').readlines();
 config.Data.outputPrimaryDataset = 'Private_QCDWA'
 #config.Data.inputDBS = 'global'
 config.Data.splitting = 'FileBased'
-config.Data.unitsPerJob = 1
+config.Data.unitsPerJob = 5
 config.Data.totalUnits = -1
+#config.Data.outLFNDirBase = '/store/user/qihuang/'
 config.Data.publication = False
+config.Data.outLFNDirBase = '/store/group/phys_jetmet/qihuang/'
 config.Data.outputDatasetTag = 'WA-private'
 
 config.section_("Site")
-config.Site.storageSite = 'T3_US_FNALLPC'  #2_CH_CERN'
+config.Site.storageSite = 'T2_CH_CERN'
