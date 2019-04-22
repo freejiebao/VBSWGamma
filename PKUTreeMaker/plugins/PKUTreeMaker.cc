@@ -62,6 +62,9 @@
 #include "MuonAnalysis/MuonAssociators/interface/PropagateToMuon.h"
 #include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
 #include "TrackingTools/Records/interface/TransientTrackRecord.h"
+
+using namespace std;
+
 struct sortPt {
     bool operator()(TLorentzVector* s1, TLorentzVector* s2) const {
         return s1->Pt() >= s2->Pt();
@@ -379,6 +382,7 @@ float PKUTreeMaker::EApho(float x) {
 //
 PKUTreeMaker::PKUTreeMaker(const edm::ParameterSet& iConfig)  //:
     : effAreaChHadrons_((iConfig.getParameter<edm::FileInPath>("effAreaChHadFile")).fullPath()), effAreaNeuHadrons_((iConfig.getParameter<edm::FileInPath>("effAreaNeuHadFile")).fullPath()), effAreaPhotons_((iConfig.getParameter<edm::FileInPath>("effAreaPhoFile")).fullPath()) {
+cout<<"@@@@@@@ test1"<<endl;
     hltToken_ = consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("hltToken"));
     elPaths1_ = iConfig.getParameter<std::vector<std::string>>("elPaths1");
     elPaths2_ = iConfig.getParameter<std::vector<std::string>>("elPaths2");
@@ -917,6 +921,7 @@ double PKUTreeMaker::getJEC(reco::Candidate::LorentzVector& rawJetP4, const pat:
 }
 //------------------------------------
 double PKUTreeMaker::getJECOffset(reco::Candidate::LorentzVector& rawJetP4, const pat::Jet& jet, double& jetCorrEtaMax, std::vector<std::string> jecPayloadNames_) {
+cout<<"@@@@@@@ test2"<<endl;
     double jetCorrFactor = 1.;
     if (fabs(rawJetP4.eta()) < jetCorrEtaMax) {
         jecOffset_->setJetEta(rawJetP4.eta());
@@ -934,6 +939,7 @@ double PKUTreeMaker::getJECOffset(reco::Candidate::LorentzVector& rawJetP4, cons
 }
 //------------------------------------
 void PKUTreeMaker::addTypeICorr(edm::Event const& event) {
+cout<<"@@@@@@@ test3"<<endl;
     TypeICorrMap_.clear();
     edm::Handle<pat::JetCollection> jets_;
     event.getByToken(t1jetSrc_, jets_);
@@ -966,7 +972,7 @@ void PKUTreeMaker::addTypeICorr(edm::Event const& event) {
     }
     jecOffset_ = new FactorizedJetCorrector(vPar);
     vPar.clear();
-
+cout<<"@@@@@@@ test4"<<endl;
     for (const pat::Jet& jet : *jets_) {
         double emEnergyFraction = jet.chargedEmEnergyFraction() + jet.neutralEmEnergyFraction();
         if (skipEM_ && emEnergyFraction > skipEMfractionThreshold_)
@@ -986,6 +992,7 @@ void PKUTreeMaker::addTypeICorr(edm::Event const& event) {
             }
         }
 */
+cout<<"@@@@@@@ test5"<<endl;
         if (skipMuons_) {
             const std::vector<reco::CandidatePtr>& cands = jet.daughterPtrVector();
             for (std::vector<reco::CandidatePtr>::const_iterator cand = cands.begin();
@@ -1019,6 +1026,7 @@ void PKUTreeMaker::addTypeICorr(edm::Event const& event) {
     skipMuonSelection_ = 0;
 }
 void PKUTreeMaker::addTypeICorr_user(edm::Event const& event) {
+cout<<"@@@@@@@ test6"<<endl;
     TypeICorrMap_user_.clear();
     edm::Handle<pat::JetCollection> jets_;
     event.getByToken(t1jetSrc_user_, jets_);
@@ -1080,6 +1088,7 @@ void PKUTreeMaker::addTypeICorr_user(edm::Event const& event) {
     TypeICorrMap_user_["corrEx_JER_down"]    = corrEx_JER_down;
     TypeICorrMap_user_["corrEy_JER_down"]    = corrEy_JER_down;
     TypeICorrMap_user_["corrSumEt_JER_down"] = corrSumEt_JER_down;
+cout<<"@@@@@@@ test7"<<endl;
 }
 //------------------------------------
 math::XYZTLorentzVector
@@ -1265,7 +1274,7 @@ int PKUTreeMaker::matchToTruth(const reco::Photon&                              
         // ISRPho = false;
     }
     //     isprompt=(*genParticles)[im].isPromptFinalState();
-
+cout<<"@@@@@@@ test8"<<endl;
     isprompt                        = ((*genParticles)[im].isPromptFinalState() || (*genParticles)[im].isDirectPromptTauDecayProductFinalState());
     const reco::Candidate* particle = &(*genParticles)[im];
     if (abs(particle->pdgId()) == 11 && isprompt && dR < 0.3)
@@ -1357,7 +1366,7 @@ void PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
     //events weight
     if (RunOnMC_) {
-
+cout<<"@@@@@@@ test9"<<endl;
         //        std::cout<<lheEvtInfo->hepeup().NUP<<std::endl;
         edm::Handle<GenEventInfoProduct> genEvtInfo;
         iEvent.getByToken(GenToken_, genEvtInfo);
@@ -1377,7 +1386,6 @@ void PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
             }
         }
     }
-
     Handle<TriggerResults> trigRes;
     iEvent.getByToken(hltToken_, trigRes);
     int xtemp1 = 0;
@@ -1538,6 +1546,7 @@ void PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
             //         const float  rawPt    = met.shiftedPt(pat::MET::METUncertainty::NoShift, pat::MET::METUncertaintyLevel::Raw);
             //         const float  rawPhi   = met.shiftedPhi(pat::MET::METUncertainty::NoShift, pat::MET::METUncertaintyLevel::Raw);
             //         const float  rawSumEt = met.shiftedSumEt(pat::MET::METUncertainty::NoShift, pat::MET::METUncertaintyLevel::Raw);
+cout<<"@@@@@@@ test10"<<endl;
             const float rawPt    = met.uncorPt();
             const float rawPhi   = met.uncorPhi();
             const float rawSumEt = met.uncorSumEt();
@@ -1579,6 +1588,7 @@ void PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
             double sumEtcorr_JER_down = rawSumEt + TypeICorrMap_user_["corrSumEt_JEC"] + TypeICorrMap_user_["corrSumEt_JER_down"];
             //------------------ correction from JetuserData---------------------
             // Marked for debug
+cout<<"@@@@@@@ test11"<<endl;
             TLorentzVector corrmet;
             corrmet.SetPxPyPzE(pxcorr, pycorr, 0., et);
             useless    = sumEtcorr;
@@ -1641,7 +1651,7 @@ void PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     mtVlepnew  = sqrt(2 * ptlep1 * met * (1.0 - cos(philep1 - metPhi)));
     nlooseeles = looseeles->size();
     nloosemus  = loosemus->size();
-
+cout<<"@@@@@@@ test12"<<endl;
     TLorentzVector glepton;
     glepton.SetPtEtaPhiE(ptlep1, etalep1, philep1, energylep1);
     math::XYZTLorentzVector     neutrinoP4 = getNeutrinoP4(MET_et, MET_phi, glepton, 1);
