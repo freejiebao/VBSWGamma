@@ -4,64 +4,64 @@
 #include <iostream>
 #include <memory>
 // user include files
-#include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
-#include "FWCore/Framework/interface/Event.h"
-#include "FWCore/Framework/interface/MakerMacros.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
-#include "FWCore/Utilities/interface/Exception.h"
+#include "CommonTools/CandUtils/interface/AddFourMomenta.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "DataFormats/Common/interface/View.h"
+#include "CondFormats/JetMETObjects/interface/FactorizedJetCorrector.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
 #include "DataFormats/Candidate/interface/Candidate.h"
+#include "DataFormats/Candidate/interface/CandidateFwd.h"
+#include "DataFormats/Candidate/interface/CompositeCandidate.h"
+#include "DataFormats/Candidate/interface/CompositeCandidateFwd.h"
+#include "DataFormats/Candidate/interface/ShallowCloneCandidate.h"
+#include "DataFormats/Common/interface/View.h"
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "DataFormats/JetReco/interface/GenJet.h"
+#include "DataFormats/JetReco/interface/GenJetCollection.h"
+#include "DataFormats/Math/interface/deltaR.h"
+#include "DataFormats/PatCandidates/interface/Electron.h"
+#include "DataFormats/PatCandidates/interface/Jet.h"
+#include "DataFormats/PatCandidates/interface/MET.h"
+#include "DataFormats/PatCandidates/interface/Muon.h"
+#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
+#include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
+#include "DataFormats/PatCandidates/interface/Photon.h"
+#include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
-#include "DataFormats/HepMCCandidate/interface/GenParticle.h"  
-#include "JetMETCorrections/Objects/interface/JetCorrector.h"
-#include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
+#include "FWCore/Common/interface/TriggerNames.h"
+#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/Frameworkfwd.h"
+#include "FWCore/Framework/interface/MakerMacros.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "FWCore/Utilities/interface/Exception.h"
+#include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 #include "JetMETCorrections/Objects/interface/JetCorrectionsRecord.h"
-#include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
-#include "CondFormats/JetMETObjects/interface/FactorizedJetCorrector.h"
-#include "DataFormats/PatCandidates/interface/MET.h"
-#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
+#include "JetMETCorrections/Objects/interface/JetCorrector.h"
+#include "RecoEgamma/EgammaTools/interface/ConversionTools.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 #include "SimDataFormats/GeneratorProducts/interface/LHEEventProduct.h"
-#include "DataFormats/JetReco/interface/GenJetCollection.h"
-#include "DataFormats/JetReco/interface/GenJet.h"
-#include "DataFormats/PatCandidates/interface/Jet.h"
-#include "DataFormats/PatCandidates/interface/Muon.h"
-#include "DataFormats/PatCandidates/interface/Electron.h"
-#include "DataFormats/PatCandidates/interface/Photon.h"
-#include "RecoEgamma/EgammaTools/interface/ConversionTools.h"
-#include "DataFormats/Math/interface/deltaR.h"
-#include "DataFormats/Candidate/interface/ShallowCloneCandidate.h"
-#include "DataFormats/Candidate/interface/CompositeCandidate.h"
-#include "DataFormats/Candidate/interface/CandidateFwd.h"
-#include "DataFormats/Candidate/interface/CompositeCandidateFwd.h"
-#include "CommonTools/CandUtils/interface/AddFourMomenta.h"
-#include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
-#include "FWCore/Common/interface/TriggerNames.h"
-#include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
-#include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
-#include "TTree.h"
 #include "TFile.h"
 #include "TLorentzVector.h"
-#include<algorithm>
+#include "TTree.h"
+#include <algorithm>
 #define Pi 3.141593
+#include "CommonTools/Utils/interface/StringCutObjectSelector.h"
 #include "Math/VectorUtil.h"
+#include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 #include "TMath.h"
 #include <TFormula.h>
-#include "CommonTools/Utils/interface/StringCutObjectSelector.h"
-#include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
 #include "DataFormats/Common/interface/ValueMap.h"
-#include "RecoEgamma/EgammaTools/interface/EffectiveAreas.h"
 #include "DataFormats/MuonReco/interface/MuonSelectors.h"
-#include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
 #include "MuonAnalysis/MuonAssociators/interface/PropagateToMuon.h"
+#include "RecoEgamma/EgammaTools/interface/EffectiveAreas.h"
 #include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
 #include "TrackingTools/Records/interface/TransientTrackRecord.h"
+#include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
 
 using namespace std;
 
@@ -157,6 +157,11 @@ private:
     int    nBX;
     double ptVlep, yVlep, phiVlep, massVlep, mtVlep, mtVlepnew;
     double ptVlepJEC, yVlepJEC, phiVlepJEC, massVlepJEC, mtVlepJEC, mtVlepJECnew;
+    double ptVlepJEC_new, yVlepJEC_new, phiVlepJEC_new, massVlepJEC_new, mtVlepJEC_new, mtVlepJECnew_new;
+    double ptVlepJEC_JEC_up, yVlepJEC_JEC_up, phiVlepJEC_JEC_up, massVlepJEC_JEC_up, mtVlepJEC_JEC_up, mtVlepJECnew_JEC_up;
+    double ptVlepJEC_JEC_down, yVlepJEC_JEC_down, phiVlepJEC_JEC_down, massVlepJEC_JEC_down, mtVlepJEC_JEC_down, mtVlepJECnew_JEC_down;
+        double ptVlepJEC_JER_up, yVlepJEC_JER_up, phiVlepJEC_JER_up, massVlepJEC_JER_up, mtVlepJEC_JER_up, mtVlepJECnew_JER_up;
+    double ptVlepJEC_JER_down, yVlepJEC_JER_down, phiVlepJEC_JER_down, massVlepJEC_JER_down, mtVlepJEC_JER_down, mtVlepJECnew_JER_down;
     double Mla, Mva;
     double Mla_f, Mva_f;
     double ptlep1, etalep1, philep1, energylep1;
@@ -218,7 +223,7 @@ private:
     double dR_, dR1_;
     //Jets
     int    jet1hf, jet1pf, jet2hf, jet2pf, jet1hf_f, jet1pf_f, jet2hf_f, jet2pf_f;
-    double Dphiwajj, Dphiwajj_f;
+    double Dphiwajj, Dphiwajj_f,Dphiwajj_new,Dphiwajj_JEC_up,Dphiwajj_JEC_down,Dphiwajj_JER_up,Dphiwajj_JER_down;
 
     //Jets
     double jet1pt, jet1eta, jet1phi, jet1e, jet1csv, jet1icsv;
@@ -382,7 +387,6 @@ float PKUTreeMaker::EApho(float x) {
 //
 PKUTreeMaker::PKUTreeMaker(const edm::ParameterSet& iConfig)  //:
     : effAreaChHadrons_((iConfig.getParameter<edm::FileInPath>("effAreaChHadFile")).fullPath()), effAreaNeuHadrons_((iConfig.getParameter<edm::FileInPath>("effAreaNeuHadFile")).fullPath()), effAreaPhotons_((iConfig.getParameter<edm::FileInPath>("effAreaPhoFile")).fullPath()) {
-cout<<"@@@@@@@ test1"<<endl;
     hltToken_ = consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("hltToken"));
     elPaths1_ = iConfig.getParameter<std::vector<std::string>>("elPaths1");
     elPaths2_ = iConfig.getParameter<std::vector<std::string>>("elPaths2");
@@ -459,6 +463,31 @@ cout<<"@@@@@@@ test1"<<endl;
     outTree_->Branch("phiVlepJEC", &phiVlepJEC, "phiVlepJEC/D");
     outTree_->Branch("massVlepJEC", &massVlepJEC, "massVlepJEC/D");
     outTree_->Branch("mtVlepJECnew", &mtVlepJECnew, "mtVlepJECnew/D");
+    outTree_->Branch("ptVlepJEC_new", &ptVlepJEC_new, "ptVlepJEC_new/D");
+    outTree_->Branch("yVlepJEC_new", &yVlepJEC_new, "yVlepJEC_new/D");
+    outTree_->Branch("phiVlepJEC_new", &phiVlepJEC_new, "phiVlepJEC_new/D");
+    outTree_->Branch("massVlepJEC_new", &massVlepJEC_new, "massVlepJEC_new/D");
+    outTree_->Branch("mtVlepJECnew_new", &mtVlepJECnew_new, "mtVlepJECnew_new/D");
+    outTree_->Branch("ptVlepJEC_JEC_up", &ptVlepJEC_JEC_up, "ptVlepJEC_JEC_up/D");
+    outTree_->Branch("yVlepJEC_JEC_up", &yVlepJEC_JEC_up, "yVlepJEC_JEC_up/D");
+    outTree_->Branch("phiVlepJEC_JEC_up", &phiVlepJEC_JEC_up, "phiVlepJEC_JEC_up/D");
+    outTree_->Branch("massVlepJEC_JEC_up", &massVlepJEC_JEC_up, "massVlepJEC_JEC_up/D");
+    outTree_->Branch("mtVlepJECnew_JEC_up", &mtVlepJECnew_JEC_up, "mtVlepJECnew_JEC_up/D");
+    outTree_->Branch("ptVlepJEC_JEC_down", &ptVlepJEC_JEC_down, "ptVlepJEC_JEC_down/D");
+    outTree_->Branch("yVlepJEC_JEC_down", &yVlepJEC_JEC_down, "yVlepJEC_JEC_down/D");
+    outTree_->Branch("phiVlepJEC_JEC_down", &phiVlepJEC_JEC_down, "phiVlepJEC_JEC_down/D");
+    outTree_->Branch("massVlepJEC_JEC_down", &massVlepJEC_JEC_down, "massVlepJEC_JEC_down/D");
+    outTree_->Branch("mtVlepJECnew_JEC_down", &mtVlepJECnew_JEC_down, "mtVlepJECnew_JEC_down/D");
+    outTree_->Branch("ptVlepJEC_JER_up", &ptVlepJEC_JER_up, "ptVlepJEC_JER_up/D");
+    outTree_->Branch("yVlepJEC_JER_up", &yVlepJEC_JER_up, "yVlepJEC_JER_up/D");
+    outTree_->Branch("phiVlepJEC_JER_up", &phiVlepJEC_JER_up, "phiVlepJEC_JER_up/D");
+    outTree_->Branch("massVlepJEC_JER_up", &massVlepJEC_JER_up, "massVlepJEC_JER_up/D");
+    outTree_->Branch("mtVlepJECnew_JER_up", &mtVlepJECnew_JER_up, "mtVlepJECnew_JER_up/D");
+    outTree_->Branch("ptVlepJEC_JER_down", &ptVlepJEC_JER_down, "ptVlepJEC_JER_down/D");
+    outTree_->Branch("yVlepJEC_JER_down", &yVlepJEC_JER_down, "yVlepJEC_JER_down/D");
+    outTree_->Branch("phiVlepJEC_JER_down", &phiVlepJEC_JER_down, "phiVlepJEC_JER_down/D");
+    outTree_->Branch("massVlepJEC_JER_down", &massVlepJEC_JER_down, "massVlepJEC_JER_down/D");
+    outTree_->Branch("mtVlepJECnew_JER_down", &mtVlepJECnew_JER_down, "mtVlepJECnew_JER_down/D");
     outTree_->Branch("Mla", &Mla, "Mla/D");
     outTree_->Branch("Mla_f", &Mla_f, "Mla_f/D");
     outTree_->Branch("Mva", &Mva, "Mva/D");
@@ -858,7 +887,11 @@ cout<<"@@@@@@@ test1"<<endl;
     outTree_->Branch("j2metPhi_JER_down_f", &j2metPhi_JER_down_f, "j2metPhi_JER_down_f/D");
     outTree_->Branch("Dphiwajj", &Dphiwajj, "Dphiwajj/D");
     outTree_->Branch("Dphiwajj_f", &Dphiwajj_f, "Dphiwajj_f/D");
-
+    outTree_->Branch("Dphiwajj_new", &Dphiwajj_new, "Dphiwajj_new/D");
+    outTree_->Branch("Dphiwajj_JEC_up", &Dphiwajj_JEC_up, "Dphiwajj_JEC_up/D");
+    outTree_->Branch("Dphiwajj_JEC_down", &Dphiwajj_JEC_down, "Dphiwajj_JEC_down/D");
+    outTree_->Branch("Dphiwajj_JER_up", &Dphiwajj_JER_up, "Dphiwajj_JER_up/D");
+    outTree_->Branch("Dphiwajj_JER_down", &Dphiwajj_JER_down, "Dphiwajj_JER_down/D");
     // MET
     outTree_->Branch("METraw_et", &METraw_et, "METraw_et/D");
     outTree_->Branch("METraw_phi", &METraw_phi, "METraw_phi/D");
@@ -921,7 +954,6 @@ double PKUTreeMaker::getJEC(reco::Candidate::LorentzVector& rawJetP4, const pat:
 }
 //------------------------------------
 double PKUTreeMaker::getJECOffset(reco::Candidate::LorentzVector& rawJetP4, const pat::Jet& jet, double& jetCorrEtaMax, std::vector<std::string> jecPayloadNames_) {
-cout<<"@@@@@@@ test2"<<endl;
     double jetCorrFactor = 1.;
     if (fabs(rawJetP4.eta()) < jetCorrEtaMax) {
         jecOffset_->setJetEta(rawJetP4.eta());
@@ -939,7 +971,6 @@ cout<<"@@@@@@@ test2"<<endl;
 }
 //------------------------------------
 void PKUTreeMaker::addTypeICorr(edm::Event const& event) {
-cout<<"@@@@@@@ test3"<<endl;
     TypeICorrMap_.clear();
     edm::Handle<pat::JetCollection> jets_;
     event.getByToken(t1jetSrc_, jets_);
@@ -972,7 +1003,6 @@ cout<<"@@@@@@@ test3"<<endl;
     }
     jecOffset_ = new FactorizedJetCorrector(vPar);
     vPar.clear();
-cout<<"@@@@@@@ test4"<<endl;
     for (const pat::Jet& jet : *jets_) {
         double emEnergyFraction = jet.chargedEmEnergyFraction() + jet.neutralEmEnergyFraction();
         if (skipEM_ && emEnergyFraction > skipEMfractionThreshold_)
@@ -992,7 +1022,6 @@ cout<<"@@@@@@@ test4"<<endl;
             }
         }
 */
-cout<<"@@@@@@@ test5"<<endl;
         if (skipMuons_) {
             const std::vector<reco::CandidatePtr>& cands = jet.daughterPtrVector();
             for (std::vector<reco::CandidatePtr>::const_iterator cand = cands.begin();
@@ -1026,7 +1055,6 @@ cout<<"@@@@@@@ test5"<<endl;
     skipMuonSelection_ = 0;
 }
 void PKUTreeMaker::addTypeICorr_user(edm::Event const& event) {
-cout<<"@@@@@@@ test6"<<endl;
     TypeICorrMap_user_.clear();
     edm::Handle<pat::JetCollection> jets_;
     event.getByToken(t1jetSrc_user_, jets_);
@@ -1088,7 +1116,6 @@ cout<<"@@@@@@@ test6"<<endl;
     TypeICorrMap_user_["corrEx_JER_down"]    = corrEx_JER_down;
     TypeICorrMap_user_["corrEy_JER_down"]    = corrEy_JER_down;
     TypeICorrMap_user_["corrSumEt_JER_down"] = corrSumEt_JER_down;
-cout<<"@@@@@@@ test7"<<endl;
 }
 //------------------------------------
 math::XYZTLorentzVector
@@ -1274,7 +1301,6 @@ int PKUTreeMaker::matchToTruth(const reco::Photon&                              
         // ISRPho = false;
     }
     //     isprompt=(*genParticles)[im].isPromptFinalState();
-cout<<"@@@@@@@ test8"<<endl;
     isprompt                        = ((*genParticles)[im].isPromptFinalState() || (*genParticles)[im].isDirectPromptTauDecayProductFinalState());
     const reco::Candidate* particle = &(*genParticles)[im];
     if (abs(particle->pdgId()) == 11 && isprompt && dR < 0.3)
@@ -1366,7 +1392,6 @@ void PKUTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
     //events weight
     if (RunOnMC_) {
-cout<<"@@@@@@@ test9"<<endl;
         //        std::cout<<lheEvtInfo->hepeup().NUP<<std::endl;
         edm::Handle<GenEventInfoProduct> genEvtInfo;
         iEvent.getByToken(GenToken_, genEvtInfo);
@@ -1420,9 +1445,50 @@ cout<<"@@@@@@@ test9"<<endl;
         if (HLT_Mu3 < mtemp3)
             HLT_Mu3 = mtemp3;
     }
+/*
+    edm::Handle<pat::METCollection> METs_;
+    iEvent.getByToken(metToken_, METs_);
+    //https://indico.cern.ch/event/557439/contributions/2246809/attachments/1344891/2027219/METValidationStudies.pdf
+    //https://hypernews.cern.ch/HyperNews/CMS/get/physTools/3361/1.html
+    //https://github.com/cms-sw/cmssw/blob/fdbcb59c16cafd2a9b56177064bc0b6b93cc51dc/DataFormats/PatCandidates/interface/MET.h#L151-L168
+    if (!METs_.isValid())
+        return;
+    const pat::MET* patmet              = &(METs_->front());
+    double          met                 = METs_->front().pt();
+    double          met_JetResUp        = patmet->shiftedPt(pat::MET::JetResUp,pat::MET::Type1Smear);
 
-    edm::Handle<edm::View<reco::Candidate>> leptonicVs;
-    iEvent.getByToken(leptonicVSrc_, leptonicVs);
+    //double          met_JetResDownSmear = patmet->shiftedPt(pat::MET::JetResDownSmear);
+    double          met_JetEnUp         = patmet->shiftedPt(pat::MET::JetEnUp);
+    double          met_JetEnDown       = patmet->shiftedPt(pat::MET::JetEnDown);
+    if (RunOnMC_) {
+        genMET = METs_->front().genMET()->pt();
+    }
+    std::cout << "______________ MET ______________" << std::endl;
+    std::cout << met << "|" << METs_->front().phi() << "|" << genMET <<"|"<<METs_->front().uncorPt()<< "|" << met_JetResUp << "|" << "|" << met_JetResDown << "|" << "|" << met_JetEnUp << "|" << met_JetEnDown << std::endl;
+    std::cout << "______________ MET ______________" << std::endl;
+    MET_et=met;
+    MET_phi=METs_->front().phi();
+    //MET_sumEt=METs_->front().SumEt();
+    //MET_corrPx=METs_->front().Px();
+    //MET_corrPy=METs_->front().Py();
+    MET_et_new=met;
+    MET_et_JEC_up = met_JetEnUp;
+    MET_et_JEC_down = met_JetEnDown;
+    MET_et_JER_up = met_JetResUp;
+    MET_et_JER_down = met_JetResDown;
+    MET_phi_new=METs_->front().phi();
+    MET_phi_JEC_up=patmet->shiftedPhi(pat::MET::JetEnUp);
+    MET_phi_JEC_down=patmet->shiftedPhi(pat::MET::JetEnDown);
+    MET_phi_JER_up=patmet->shiftedPhi(pat::MET::JetResUp,pat::MET::Type1Smear);
+    MET_phi_JER_down=patmet->shiftedPhi(pat::MET::JetResDown,pat::MET::Type1Smear);
+    //MET_sumEt_new = METs_->front().SumEt();
+    MET_sumEt_JEC_up = patmet->shiftedSumEt(pat::MET::JetEnUp);
+    MET_sumEt_JEC_down = patmet->shiftedSumEt(pat::MET::JetEnDown);
+    MET_sumEt_JER_up = patmet->shiftedSumEt(pat::MET::JetResUp,pat::MET::Type1Smear);
+    MET_sumEt_JER_down = patmet->shiftedSumEt(pat::MET::JetResDown,pat::MET::Type1Smear);
+*/   
+   edm::Handle<edm::View<reco::Candidate> > leptonicVs;
+   iEvent.getByToken(leptonicVSrc_, leptonicVs);
 
     if (leptonicVs->empty()) {
         outTree_->Fill();
@@ -1534,95 +1600,73 @@ cout<<"@@@@@@@ test9"<<endl;
 
     // ************************* MET ********************** //
     edm::Handle<pat::METCollection> METs_;
-    bool                            defaultMET = iEvent.getByToken(metInputToken_, METs_);
+    iEvent.getByToken(metToken_, METs_);
+    //https://indico.cern.ch/event/557439/contributions/2246809/attachments/1344891/2027219/METValidationStudies.pdf
+    //https://hypernews.cern.ch/HyperNews/CMS/get/physTools/3361/1.html
+    //https://github.com/cms-sw/cmssw/blob/fdbcb59c16cafd2a9b56177064bc0b6b93cc51dc/DataFormats/PatCandidates/interface/MET.h#L151-L168
+    if (!METs_.isValid())
+        return;
+    const pat::MET* patmet              = &(METs_->front());
+    double          met                 = METs_->front().pt();
+    double          met_JetResUp        = patmet->shiftedPt(pat::MET::JetResUp,pat::MET::Type1Smear);
+    //double          met_JetResUpSmear   = patmet->shiftedPt(pat::MET::JetResUpSmear);
+    double          met_JetResDown      = patmet->shiftedPt(pat::MET::JetResDown,pat::MET::Type1Smear);
+    //double          met_JetResDownSmear = patmet->shiftedPt(pat::MET::JetResDownSmear);
+    double          met_JetEnUp         = patmet->shiftedPt(pat::MET::JetEnUp);
+    double          met_JetEnDown       = patmet->shiftedPt(pat::MET::JetEnDown);
+     
     if (RunOnMC_) {
-        const pat::MET& xmet = METs_->front();
-        genMET               = xmet.genMET()->pt();
+        genMET = METs_->front().genMET()->pt();
     }
-    if (defaultMET) {
-        addTypeICorr(iEvent);
-        addTypeICorr_user(iEvent);
-        for (const pat::MET& met : *METs_) {
-            //         const float  rawPt    = met.shiftedPt(pat::MET::METUncertainty::NoShift, pat::MET::METUncertaintyLevel::Raw);
-            //         const float  rawPhi   = met.shiftedPhi(pat::MET::METUncertainty::NoShift, pat::MET::METUncertaintyLevel::Raw);
-            //         const float  rawSumEt = met.shiftedSumEt(pat::MET::METUncertainty::NoShift, pat::MET::METUncertaintyLevel::Raw);
-cout<<"@@@@@@@ test10"<<endl;
-            const float rawPt    = met.uncorPt();
-            const float rawPhi   = met.uncorPhi();
-            const float rawSumEt = met.uncorSumEt();
-            TVector2    rawMET_;
-            rawMET_.SetMagPhi(rawPt, rawPhi);
-            Double_t rawPx   = rawMET_.Px();
-            Double_t rawPy   = rawMET_.Py();
-            Double_t rawEt   = std::hypot(rawPx, rawPy);
-            METraw_et        = rawEt;
-            METraw_phi       = rawPhi;
-            METraw_sumEt     = rawSumEt;
-            double pxcorr    = rawPx + TypeICorrMap_["corrEx"];
-            double pycorr    = rawPy + TypeICorrMap_["corrEy"];
-            double et        = std::hypot(pxcorr, pycorr);
-            double sumEtcorr = rawSumEt + TypeICorrMap_["corrSumEt"];
-            // Marked for debug
-            //------------------central value, correction from JetuserData---------------------
-            double pxcorr_new    = rawPx + TypeICorrMap_user_["corrEx_JEC"] + TypeICorrMap_user_["corrEx_JER"];
-            double pycorr_new    = rawPy + TypeICorrMap_user_["corrEy_JEC"] + TypeICorrMap_user_["corrEy_JER"];
-            double et_new        = std::hypot(pxcorr_new, pycorr_new);
-            double sumEtcorr_new = rawSumEt + TypeICorrMap_user_["corrSumEt_JEC"] + TypeICorrMap_user_["corrSumEt_JER"];
-            //----for JEC uncertainty study
-            double pxcorr_JEC_up      = rawPx + TypeICorrMap_user_["corrEx_JEC_up"] + TypeICorrMap_user_["corrEx_JER"];
-            double pycorr_JEC_up      = rawPy + TypeICorrMap_user_["corrEy_JEC_up"] + TypeICorrMap_user_["corrEy_JER"];
-            double et_JEC_up          = std::hypot(pxcorr_JEC_up, pycorr_JEC_up);
-            double sumEtcorr_JEC_up   = rawSumEt + TypeICorrMap_user_["corrSumEt_JEC_up"] + TypeICorrMap_user_["corrSumEt_JER"];
-            double pxcorr_JEC_down    = rawPx + TypeICorrMap_user_["corrEx_JEC_down"] + TypeICorrMap_user_["corrEx_JER"];
-            double pycorr_JEC_down    = rawPy + TypeICorrMap_user_["corrEy_JEC_down"] + TypeICorrMap_user_["corrEy_JER"];
-            double et_JEC_down        = std::hypot(pxcorr_JEC_down, pycorr_JEC_down);
-            double sumEtcorr_JEC_down = rawSumEt + TypeICorrMap_user_["corrSumEt_JEC_down"] + TypeICorrMap_user_["corrSumEt_JER"];
-            //----for JER uncertainty study
-            double pxcorr_JER_up      = rawPx + TypeICorrMap_user_["corrEx_JEC"] + TypeICorrMap_user_["corrEx_JER_up"];
-            double pycorr_JER_up      = rawPy + TypeICorrMap_user_["corrEy_JEC"] + TypeICorrMap_user_["corrEy_JER_up"];
-            double et_JER_up          = std::hypot(pxcorr_JER_up, pycorr_JER_up);
-            double sumEtcorr_JER_up   = rawSumEt + TypeICorrMap_user_["corrSumEt_JEC"] + TypeICorrMap_user_["corrSumEt_JER_up"];
-            double pxcorr_JER_down    = rawPx + TypeICorrMap_user_["corrEx_JEC"] + TypeICorrMap_user_["corrEx_JER_down"];
-            double pycorr_JER_down    = rawPy + TypeICorrMap_user_["corrEy_JEC"] + TypeICorrMap_user_["corrEy_JER_down"];
-            double et_JER_down        = std::hypot(pxcorr_JER_down, pycorr_JER_down);
-            double sumEtcorr_JER_down = rawSumEt + TypeICorrMap_user_["corrSumEt_JEC"] + TypeICorrMap_user_["corrSumEt_JER_down"];
-            //------------------ correction from JetuserData---------------------
-            // Marked for debug
-cout<<"@@@@@@@ test11"<<endl;
-            TLorentzVector corrmet;
-            corrmet.SetPxPyPzE(pxcorr, pycorr, 0., et);
-            useless    = sumEtcorr;
-            useless    = rawEt;
-            MET_et     = et;
-            MET_phi    = corrmet.Phi();
-            MET_sumEt  = sumEtcorr;
+    std::cout << "______________ MET ______________" << std::endl;
+    std::cout << met << "|" << METs_->front().phi() << "|" << genMET <<"|"<<METs_->front().uncorPt()<< "|" << met_JetResUp << "|" << "|" << met_JetResDown << "|" << "|" << met_JetEnUp << "|" << met_JetEnDown << std::endl;
+    std::cout << "______________ MET ______________" << std::endl;
+    MET_et=met;
+    MET_phi=METs_->front().phi();
+    MET_sumEt=METs_->front().sumEt();
+    //MET_corrPx=METs_->front().Px();
+    //MET_corrPy=METs_->front().Py();
+    MET_et_JEC_up = met_JetEnUp;
+    MET_et_JEC_down = met_JetEnDown;
+    MET_et_JER_up = met_JetResUp;
+    MET_et_JER_down = met_JetResDown;
+    MET_phi_JEC_up=patmet->shiftedPhi(pat::MET::JetEnUp);
+    MET_phi_JEC_down=patmet->shiftedPhi(pat::MET::JetEnDown);
+    MET_phi_JER_up=patmet->shiftedPhi(pat::MET::JetResUp,pat::MET::Type1Smear);
+    MET_phi_JER_down=patmet->shiftedPhi(pat::MET::JetResDown,pat::MET::Type1Smear);
+    MET_sumEt_JEC_up = patmet->shiftedSumEt(pat::MET::JetEnUp);
+    MET_sumEt_JEC_down = patmet->shiftedSumEt(pat::MET::JetEnDown);
+    MET_sumEt_JER_up = patmet->shiftedSumEt(pat::MET::JetResUp,pat::MET::Type1Smear);
+    MET_sumEt_JER_down = patmet->shiftedSumEt(pat::MET::JetResDown,pat::MET::Type1Smear);
+    //    METraw_et        = METs_->front().uncorPt();
+    //    METraw_phi       = METs_->front().uncorPhi();
+    //    METraw_sumEt     = METs_->front().uncorSumEt();
+    addTypeICorr(iEvent);
+    //addTypeICorr_user(iEvent);
+    for (const pat::MET &met : *METs_) {
+              const float rawPt = met.uncorPt();
+              const float rawPhi = met.uncorPhi();
+              const float rawSumEt = met.uncorSumEt();
+            TVector2 rawMET_;
+            rawMET_.SetMagPhi (rawPt, rawPhi );
+            Double_t rawPx = rawMET_.Px();
+            Double_t rawPy = rawMET_.Py();
+            Double_t rawEt = std::hypot(rawPx,rawPy);
+            METraw_et = rawEt;
+            METraw_phi = rawPhi;
+            METraw_sumEt = rawSumEt;
+            double pxcorr = rawPx+TypeICorrMap_["corrEx"];
+            double pycorr = rawPy+TypeICorrMap_["corrEy"];
+            double et     = std::hypot(pxcorr,pycorr);
+            double sumEtcorr = rawSumEt+TypeICorrMap_["corrSumEt"];
+            TLorentzVector corrmet; corrmet.SetPxPyPzE(pxcorr,pycorr,0.,et);
+            useless = sumEtcorr;
+            useless = rawEt;
+            MET_et_new = et;
+            MET_phi_new = corrmet.Phi();
+            MET_sumEt_new = sumEtcorr;
             MET_corrPx = TypeICorrMap_["corrEx"];
             MET_corrPy = TypeICorrMap_["corrEy"];
-            // Marked for debug
-            MET_et_new      = et_new;
-            MET_et_JEC_up   = et_JEC_up;
-            MET_et_JEC_down = et_JEC_down;
-            MET_et_JER_up   = et_JER_up;
-            MET_et_JER_down = et_JER_down;
-
-            corrmet.SetPxPyPzE(pxcorr_new, pycorr_new, 0., et_new);
-            MET_phi_new = corrmet.Phi();
-            corrmet.SetPxPyPzE(pxcorr_JEC_up, pycorr_JEC_up, 0., et_JEC_up);
-            MET_phi_JEC_up = corrmet.Phi();
-            corrmet.SetPxPyPzE(pxcorr_JEC_down, pycorr_JEC_down, 0., et_JEC_down);
-            MET_phi_JEC_down = corrmet.Phi();
-            corrmet.SetPxPyPzE(pxcorr_JER_up, pycorr_JER_up, 0., et_JER_up);
-            MET_phi_JER_up = corrmet.Phi();
-            corrmet.SetPxPyPzE(pxcorr_JER_down, pycorr_JER_down, 0., et_JER_down);
-            MET_phi_JER_down = corrmet.Phi();
-
-            MET_sumEt_new      = sumEtcorr_new;
-            MET_sumEt_JEC_up   = sumEtcorr_JEC_up;
-            MET_sumEt_JEC_down = sumEtcorr_JEC_down;
-            MET_sumEt_JER_up   = sumEtcorr_JER_up;
-            MET_sumEt_JER_down = sumEtcorr_JER_down;
-            // Marked for debug
-        }
     }
     //------------------------------------
     /// For the time being, set these to 1
@@ -1651,17 +1695,53 @@ cout<<"@@@@@@@ test11"<<endl;
     mtVlepnew  = sqrt(2 * ptlep1 * met * (1.0 - cos(philep1 - metPhi)));
     nlooseeles = looseeles->size();
     nloosemus  = loosemus->size();
-cout<<"@@@@@@@ test12"<<endl;
     TLorentzVector glepton;
     glepton.SetPtEtaPhiE(ptlep1, etalep1, philep1, energylep1);
     math::XYZTLorentzVector     neutrinoP4 = getNeutrinoP4(MET_et, MET_phi, glepton, 1);
+    math::XYZTLorentzVector     neutrinoP4_new = getNeutrinoP4(MET_et_new, MET_phi_new, glepton, 1);
+    math::XYZTLorentzVector     neutrinoP4_JEC_up = getNeutrinoP4(MET_et_JEC_up, MET_phi_JEC_up, glepton, 1);
+    math::XYZTLorentzVector     neutrinoP4_JEC_down = getNeutrinoP4(MET_et_JEC_down, MET_phi_JEC_down, glepton, 1);
+    math::XYZTLorentzVector     neutrinoP4_JER_up = getNeutrinoP4(MET_et_JER_up, MET_phi_JER_up, glepton, 1);
+    math::XYZTLorentzVector     neutrinoP4_JER_down = getNeutrinoP4(MET_et_JER_down, MET_phi_JER_down, glepton, 1);
     reco::CandidateBaseRef      METBaseRef = metHandle->refAt(0);  //?????
     reco::ShallowCloneCandidate neutrino(METBaseRef, 0, neutrinoP4);
+    reco::ShallowCloneCandidate neutrino_new(METBaseRef, 0, neutrinoP4_new);
+    reco::ShallowCloneCandidate neutrino_JEC_up(METBaseRef, 0, neutrinoP4_JEC_up);
+    reco::ShallowCloneCandidate neutrino_JEC_down(METBaseRef, 0, neutrinoP4_JEC_down);
+    reco::ShallowCloneCandidate neutrino_JER_up(METBaseRef, 0, neutrinoP4_JER_up);
+    reco::ShallowCloneCandidate neutrino_JER_down(METBaseRef, 0, neutrinoP4_JER_down);
     reco::CompositeCandidate    WLeptonic;
+    reco::CompositeCandidate    WLeptonic_new;
+    reco::CompositeCandidate    WLeptonic_JEC_up;
+    reco::CompositeCandidate    WLeptonic_JEC_down;
+    reco::CompositeCandidate    WLeptonic_JER_up;
+    reco::CompositeCandidate    WLeptonic_JER_down;
     WLeptonic.addDaughter(lepton);
     WLeptonic.addDaughter(neutrino);
+    WLeptonic_new.addDaughter(lepton);
+    WLeptonic_new.addDaughter(neutrino_new);
+    WLeptonic_JEC_up.addDaughter(lepton);
+    WLeptonic_JEC_up.addDaughter(neutrino_JEC_up);
+    WLeptonic_JEC_down.addDaughter(lepton);
+    WLeptonic_JEC_down.addDaughter(neutrino_JEC_down);
+    WLeptonic_JER_up.addDaughter(lepton);
+    WLeptonic_JER_up.addDaughter(neutrino_JER_up);
+    WLeptonic_JER_down.addDaughter(lepton);
+    WLeptonic_JER_down.addDaughter(neutrino_JER_down);
+
     AddFourMomenta addP4;
     addP4.set(WLeptonic);
+    AddFourMomenta addP4_new;
+    addP4_new.set(WLeptonic_new);
+    AddFourMomenta addP4_JEC_up;
+    addP4_JEC_up.set(WLeptonic_JEC_up);
+    AddFourMomenta addP4_JEC_down;
+    addP4_JEC_down.set(WLeptonic_JEC_down);
+    AddFourMomenta addP4_JER_up;
+    addP4_JER_up.set(WLeptonic_JER_up);
+    AddFourMomenta addP4_JER_down;
+    addP4_JER_down.set(WLeptonic_JER_down);
+
     ptVlepJEC    = WLeptonic.pt();
     yVlepJEC     = WLeptonic.eta();
     phiVlepJEC   = WLeptonic.phi();
@@ -1669,6 +1749,40 @@ cout<<"@@@@@@@ test12"<<endl;
     mtVlepJEC    = WLeptonic.mt();
     mtVlepJECnew = sqrt(2 * ptlep1 * MET_et * (1.0 - cos(philep1 - MET_phi)));
 
+    ptVlepJEC_new    = WLeptonic_new.pt();
+    yVlepJEC_new     = WLeptonic_new.eta();
+    phiVlepJEC_new   = WLeptonic_new.phi();
+    massVlepJEC_new  = WLeptonic_new.mass();
+    mtVlepJEC_new    = WLeptonic_new.mt();
+    mtVlepJECnew_new = sqrt(2 * ptlep1 * MET_et_new * (1.0 - cos(philep1 - MET_phi_new)));
+
+    ptVlepJEC_JEC_up    = WLeptonic_JEC_up.pt();
+    yVlepJEC_JEC_up     = WLeptonic_JEC_up.eta();
+    phiVlepJEC_JEC_up   = WLeptonic_JEC_up.phi();
+    massVlepJEC_JEC_up  = WLeptonic_JEC_up.mass();
+    mtVlepJEC_JEC_up    = WLeptonic_JEC_up.mt();
+    mtVlepJECnew_JEC_up = sqrt(2 * ptlep1 * MET_et_JEC_up * (1.0 - cos(philep1 - MET_phi_JEC_up)));
+
+    ptVlepJEC_JEC_down    = WLeptonic_JEC_down.pt();
+    yVlepJEC_JEC_down     = WLeptonic_JEC_down.eta();
+    phiVlepJEC_JEC_down   = WLeptonic_JEC_down.phi();
+    massVlepJEC_JEC_down  = WLeptonic_JEC_down.mass();
+    mtVlepJEC_JEC_down    = WLeptonic_JEC_down.mt();
+    mtVlepJECnew_JEC_down = sqrt(2 * ptlep1 * MET_et_JEC_down * (1.0 - cos(philep1 - MET_phi_JEC_down)));
+
+    ptVlepJEC_JER_up    = WLeptonic_JER_up.pt();
+    yVlepJEC_JER_up     = WLeptonic_JER_up.eta();
+    phiVlepJEC_JER_up   = WLeptonic_JER_up.phi();
+    massVlepJEC_JER_up  = WLeptonic_JER_up.mass();
+    mtVlepJEC_JER_up    = WLeptonic_JER_up.mt();
+    mtVlepJECnew_JER_up = sqrt(2 * ptlep1 * MET_et_JER_up * (1.0 - cos(philep1 - MET_phi_JER_up)));
+
+    ptVlepJEC_JER_down    = WLeptonic_JER_down.pt();
+    yVlepJEC_JER_down     = WLeptonic_JER_down.eta();
+    phiVlepJEC_JER_down   = WLeptonic_JER_down.phi();
+    massVlepJEC_JER_down  = WLeptonic_JER_down.mass();
+    mtVlepJEC_JER_down    = WLeptonic_JER_down.mt();
+    mtVlepJECnew_JER_down = sqrt(2 * ptlep1 * MET_et_JER_down * (1.0 - cos(philep1 - MET_phi_JER_down)));
     if (RunOnMC_ && ptlep1 > 10) {
         //const auto lept = lepton;
         lepton_istrue = matchToTrueLep(etalep1, philep1, genParticles, dR1_, ispromptLep_);
@@ -2258,6 +2372,8 @@ cout<<"@@@@@@@ test12"<<endl;
         Mjj_new      = (j1p4 + j2p4).M();
         zepp_new     = fabs((vp4 + photonp42).Rapidity() - (j1p4.Rapidity() + j2p4.Rapidity()) / 2.0);
         deltaeta_new = fabs(jet1eta_new - jet2eta_new);
+        Dphiwajj_new=fabs((vp4+photonp42).Phi()-(j1p4+j2p4).Phi());
+        if(Dphiwajj_new>Pi){Dphiwajj_new=2.0*Pi-Dphiwajj_new;}
     }
     // variable concerning jet, JEC up
     if (jetindexphoton12_JEC_up[0] > -1 && jetindexphoton12_JEC_up[1] > -1) {
@@ -2296,6 +2412,8 @@ cout<<"@@@@@@@ test12"<<endl;
         Mjj_JEC_up      = (j1p4 + j2p4).M();
         zepp_JEC_up     = fabs((vp4 + photonp42).Rapidity() - (j1p4.Rapidity() + j2p4.Rapidity()) / 2.0);
         deltaeta_JEC_up = fabs(jet1eta_JEC_up - jet2eta_JEC_up);
+        Dphiwajj_JEC_up=fabs((vp4+photonp42).Phi()-(j1p4+j2p4).Phi());
+        if(Dphiwajj_JEC_up>Pi){Dphiwajj_JEC_up=2.0*Pi-Dphiwajj_JEC_up;}
     }
     // variable concerning jet, JEC down
     if (jetindexphoton12_JEC_down[0] > -1 && jetindexphoton12_JEC_down[1] > -1) {
@@ -2336,6 +2454,8 @@ cout<<"@@@@@@@ test12"<<endl;
         Mjj_JEC_down      = (j1p4 + j2p4).M();
         zepp_JEC_down     = fabs((vp4 + photonp42).Rapidity() - (j1p4.Rapidity() + j2p4.Rapidity()) / 2.0);
         deltaeta_JEC_down = fabs(jet1eta_JEC_down - jet2eta_JEC_down);
+        Dphiwajj_JEC_down=fabs((vp4+photonp42).Phi()-(j1p4+j2p4).Phi());
+        if(Dphiwajj_JEC_down>Pi){Dphiwajj_JEC_down=2.0*Pi-Dphiwajj_JEC_down;}
     }
     // variable concerning jet, JER up
     if (jetindexphoton12_JER_up[0] > -1 && jetindexphoton12_JER_up[1] > -1) {
@@ -2376,6 +2496,8 @@ cout<<"@@@@@@@ test12"<<endl;
         Mjj_JER_up      = (j1p4 + j2p4).M();
         zepp_JER_up     = fabs((vp4 + photonp42).Rapidity() - (j1p4.Rapidity() + j2p4.Rapidity()) / 2.0);
         deltaeta_JER_up = fabs(jet1eta_JER_up - jet2eta_JER_up);
+        Dphiwajj_JER_up=fabs((vp4+photonp42).Phi()-(j1p4+j2p4).Phi());
+        if(Dphiwajj_JER_up>Pi){Dphiwajj_JER_up=2.0*Pi-Dphiwajj_JER_up;}
     }
     // variable concerning jet, JER down
     if (jetindexphoton12_JER_down[0] > -1 && jetindexphoton12_JER_down[1] > -1) {
@@ -2416,7 +2538,8 @@ cout<<"@@@@@@@ test12"<<endl;
         Mjj_JER_down      = (j1p4 + j2p4).M();
         zepp_JER_down     = fabs((vp4 + photonp42).Rapidity() - (j1p4.Rapidity() + j2p4.Rapidity()) / 2.0);
         deltaeta_JER_down = fabs(jet1eta_JER_down - jet2eta_JER_down);
-
+        Dphiwajj_JER_down=fabs((vp4+photonp42).Phi()-(j1p4+j2p4).Phi());
+        if(Dphiwajj_JER_down>Pi){Dphiwajj_JER_down=2.0*Pi-Dphiwajj_JER_down;}
         //	std::cout<<"Mjj_new "<<Mjj_new<<" Mjj_JEC_up "<<Mjj_JEC_up<<" Mjj_JEC_down "<<Mjj_JEC_down<<" Mjj_JER_up "<<Mjj_JER_up<<" Mjj_JER_down "<<Mjj_JER_down<<std::endl;
     }
     if (jetindexphoton12_f[0] > -1 && jetindexphoton12_f[1] > -1) {
@@ -2696,6 +2819,36 @@ void PKUTreeMaker::setDummyValues() {
     massVlepJEC         = -1e1;
     mtVlepJEC           = -1e1;
     mtVlepJECnew        = -1e1;
+    ptVlepJEC_new           = -1e1;
+    yVlepJEC_new            = -1e1;
+    phiVlepJEC_new          = -1e1;
+    massVlepJEC_new         = -1e1;
+    mtVlepJEC_new           = -1e1;
+    mtVlepJECnew_new        = -1e1;
+    ptVlepJEC_JEC_up           = -1e1;
+    yVlepJEC_JEC_up            = -1e1;
+    phiVlepJEC_JEC_up          = -1e1;
+    massVlepJEC_JEC_up         = -1e1;
+    mtVlepJEC_JEC_up           = -1e1;
+    mtVlepJECnew_JEC_up        = -1e1;
+    ptVlepJEC_JEC_down           = -1e1;
+    yVlepJEC_JEC_down            = -1e1;
+    phiVlepJEC_JEC_down          = -1e1;
+    massVlepJEC_JEC_down         = -1e1;
+    mtVlepJEC_JEC_down           = -1e1;
+    mtVlepJECnew_JEC_down        = -1e1;
+    ptVlepJEC_JER_up           = -1e1;
+    yVlepJEC_JER_up            = -1e1;
+    phiVlepJEC_JER_up         = -1e1;
+    massVlepJEC_JER_up    = -1e1;
+    mtVlepJEC_JER_up           = -1e1;
+    mtVlepJECnew_JER_up        = -1e1;
+    ptVlepJEC_JER_down           = -1e1;
+    yVlepJEC_JER_down            = -1e1;
+    phiVlepJEC_JER_down          = -1e1;
+    massVlepJEC_JER_down         = -1e1;
+    mtVlepJEC_JER_down           = -1e1;
+    mtVlepJECnew_JER_down        = -1e1;
     Mla                 = -1e1;
     Mla_f               = -1e1;
     Mva                 = -1e1;
@@ -2758,7 +2911,11 @@ void PKUTreeMaker::setDummyValues() {
 
     Dphiwajj   = -1e1;
     Dphiwajj_f = -1e1;
-    rawPt      = -99;
+    Dphiwajj_new   = -1e1;
+    Dphiwajj_JEC_up   = -1e1;
+    Dphiwajj_JEC_down   = -1e1;
+    Dphiwajj_JER_up   = -1e1;
+    Dphiwajj_JER_down   = -1e1;
     // Marked for debug
 
     for (int i = 0; i < 6; i++) {
